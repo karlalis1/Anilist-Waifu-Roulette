@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AniList Waifu Roulette — würfle zufällige weibliche Charaktere aus deiner AniList-Anime-Liste.">
+  <title>AniList Waifu Roulette</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+       --bg: #0d0d12;
+       --panel: #1a1a22;
+       --panel-2: #222229;
+       --text: #e8e8ef;
+       --muted: #8a8a96;
+       --pink: #8B0000;
+       --pink-2: #DC143C;
+       --border: #2a2a3a;
+     }
+    body {
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(139, 0, 0, 0.12), transparent 35%),
+        radial-gradient(circle at 85% 80%, rgba(220, 20, 60, 0.08), transparent 35%);
+      pointer-events: none;
+      z-index: 0;
+    }
+.app {
+       width: 100%;
+       max-width: 1400px;
+       margin: 0 auto;
+       background: var(--panel);
+       border: 1px solid var(--border);
+       border-radius: 16px;
+       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+       padding: 26px;
+       position: relative;
+       z-index: 1;
+     }
+    h1 {
+      font-size: 24px;
+      color: var(--pink-2);
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    input[type="text"], select, input[type="number"] {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #181822;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    input[type="text"]:focus, select:focus, input[type="number"]:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 3px rgba(255, 95, 158, 0.15);
+    }
+    select {
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+      background-size: 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 34px;
+    }
+    .field { margin-bottom: 14px; }
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--pink), var(--pink-2));
+      color: #14141c;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      box-shadow: 0 6px 18px rgba(255, 95, 158, 0.22);
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(255, 95, 158, 0.32);
+    }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { opacity: 0.55; cursor: default; }
+    #status {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 12px;
+      min-height: 16px;
+    }
+    .hint {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .hint a { color: var(--pink-2); text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
+
+    /* Modus Tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 10px 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #181822;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mode-tab.active {
+      background: linear-gradient(135deg, var(--pink), var(--pink-2));
+      color: #14141c;
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(255, 95, 158, 0.25);
+    }
+
+    /* Volume Control */
+    .volume-control {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 6px 12px 6px 10px;
+      z-index: 100;
+    }
+    .volume-icon {
+      font-size: 16px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+    .volume-icon:hover { color: var(--text); }
+    .volume-icon.muted { color: var(--pink); }
+    #volumeSlider {
+      width: 100px;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    #volumeSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--pink);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #volumeSlider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 8px rgba(255, 95, 158, 0.6);
+    }
+    #volumeSlider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--pink);
+      border: none;
+      cursor: pointer;
+    }
+    @media (max-width: 480px) {
+      .volume-control {
+        top: 12px;
+        right: 12px;
+        padding: 4px 8px 4px 6px;
+      }
+      .volume-icon { font-size: 14px; }
+      #volumeSlider { width: 80px; }
+    }
+
+    /* Single Roll */
+    #rollResult {
+      margin-top: 20px;
+      text-align: center;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.single-card {
+       width: min(100%, 350px);
+       margin: 0 auto;
+       border-radius: 14px;
+       overflow: hidden;
+       border: 2px solid var(--pink);
+       box-shadow: 0 12px 32px rgba(255, 95, 158, 0.18);
+       background: #181822;
+     }
+.single-card img {
+       display: block;
+       width: 100%;
+       height: 400px;
+       object-fit: cover;
+       background: #181822;
+     }
+    .single-info { padding: 14px; }
+    .single-info h2 { font-size: 18px; margin-bottom: 4px; color: #fff; }
+    .single-info p { font-size: 12px; color: var(--muted); }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .meta span:first-child { color: var(--pink-2); }
+
+    /* Tier List */
+    #tierMode { display: none; }
+    #tierMode.active { display: block; }
+    .tier-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .tier-toolbar button {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+    }
+    .tier-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .tier-row {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 8px;
+      min-height: 220px;
+    }
+    .tier-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      border-radius: 8px;
+      color: #14141c;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .tier-label.S { background: #8B0000; color: #fff; }
+    .tier-label.A { background: #B22222; color: #fff; }
+    .tier-label.B { background: #4169E1; color: #fff; }
+    .tier-label.C { background: #2E8B57; color: #fff; }
+    .tier-label.D { background: #DC143C; color: #fff; }
+    .tier-label.Unranked { background: #6c757d; color: white; }
+    .tier-drop {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      background: #181822;
+      min-height: 220px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .tier-drop.drag-over {
+      border-color: var(--pink);
+      background: rgba(255, 95, 158, 0.08);
+    }
+    .waifu-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 200px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-2);
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .waifu-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+    }
+    .waifu-chip:active { cursor: grabbing; }
+    .waifu-chip img {
+      width: 180px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--pink);
+    }
+    .waifu-chip span {
+      font-size: 12px;
+      text-align: center;
+      color: var(--text);
+      line-height: 1.2;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .waifu-chip.dragging {
+      opacity: 0.4;
+      transform: rotate(2deg) scale(0.95);
+    }
+    .waifu-chip .remove {
+      font-size: 12px;
+      color: var(--pink-2);
+      cursor: pointer;
+      line-height: 1;
+    }
+    .waifu-chip .remove:hover { color: #fff; }
+    .tier-count {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 10px;
+    }
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+      .app { padding: 22px 18px; }
+      .single-card img { height: 280px; }
+      .tier-row { grid-template-columns: 42px 1fr; }
+      .tier-label { font-size: 18px; }
+      .waifu-chip { width: 140px; }
+      .waifu-chip img { width: 120px; height: 120px; }
+      .tier-drop { min-height: 160px; gap: 8px; }
+    }
+    /* Export overlay */
+    .export-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .export-overlay.hidden { display: none; }
+    .export-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow: auto;
+      text-align: center;
+    }
+    .export-box img {
+      max-width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .export-box button {
+      margin-top: 14px;
+      width: auto;
+      padding: 10px 24px;
+    }
+
+    /* Smash or Pass */
+    #smashMode { display: none; }
+    #smashMode.active { display: block; }
+    .smash-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+    .smash-toolbar button {
+      width: auto;
+      padding: 10px 18px;
+      font-size: 13px;
+    }
+    .smash-card {
+      position: relative;
+      width: min(100%, 320px);
+      margin: 0 auto 24px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 3px solid var(--pink);
+      box-shadow: 0 20px 50px rgba(255, 95, 158, 0.25);
+      background: #181822;
+    }
+    .smash-card img {
+      display: block;
+      width: 100%;
+      height: 400px;
+      object-fit: cover;
+      background: #181822;
+      transition: transform 0.1s ease;
+    }
+    .smash-card.swipe-left img { transform: translateX(-30px) rotate(-12deg); filter: grayscale(0.3); }
+    .smash-card.swipe-right img { transform: translateX(30px) rotate(12deg); filter: grayscale(0.3); }
+    .smash-info {
+      padding: 18px;
+      text-align: center;
+    }
+    .smash-info h2 { font-size: 20px; margin-bottom: 6px; color: #fff; }
+    .smash-info p { font-size: 13px; color: var(--muted); }
+    .smash-actions {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 0 16px 24px;
+    }
+    .smash-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      font-size: 28px;
+    }
+    .smash-btn:hover { transform: scale(1.1); }
+    .smash-btn:active { transform: scale(0.95); }
+    .smash-btn.pass { background: linear-gradient(135deg, #ff4444, #cc0000); color: #fff; }
+    .smash-btn.smash { background: linear-gradient(135deg, #44cc44, #22aa22); color: #fff; }
+    .smash-btn:focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
+    .smash-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 120px;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+      z-index: 10;
+      text-shadow: 0 0 30px rgba(0,0,0,0.8), 0 4px 20px rgba(0,0,0,0.6);
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+    }
+    .smash-indicator.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    .smash-indicator.pass { color: #8B0000; }
+    .smash-indicator.smash { color: #44ff88; }
+    .smash-progress {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .smash-progress span { color: var(--pink-2); font-weight: 700; }
+
+    /* Summary */
+    .smash-summary {
+      display: none;
+      margin-top: 20px;
+      animation: fadeIn 0.5s ease;
+    }
+    .smash-summary.open { display: block; }
+    .summary-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .summary-header h3 { font-size: 20px; color: var(--pink-2); }
+    .summary-toggle {
+      background: linear-gradient(135deg, var(--pink), var(--pink-2));
+      color: #14141c;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .summary-toggle:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255,95,158,0.3); }
+    .summary-toggle:active { transform: translateY(1px); }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .summary-col { background: var(--panel-2); border-radius: 12px; padding: 16px; }
+    .summary-col h4 { font-size: 14px; margin-bottom: 12px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+    .summary-col.smash h4 { color: #44cc44; border-bottom: 2px solid #44cc44; }
+    .summary-col.pass h4 { color: #ff4444; border-bottom: 2px solid #ff4444; }
+    .summary-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: #181822;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .summary-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--pink); }
+    .summary-item span { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .summary-stats { display: flex; justify-content: space-between; margin-top: 16px; font-size: 12px; color: var(--muted); }
+    .summary-stats span:first-child { color: #44cc44; }
+    .summary-stats span:last-child { color: #ff4444; }
+    @media (max-width: 480px) {
+      .smash-card img { height: 320px; }
+      .smash-btn { width: 56px; height: 56px; font-size: 24px; }
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>🎲 AniList Waifu Roulette</h1>
+    <p class="subtitle">Gib deinen AniList-Nutzernamen ein und würfle zufällige weibliche Charaktere aus deiner Anime-Liste.</p>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="roll" id="tabRoll">Roll-Modus</button>
+      <button class="mode-tab" data-mode="tier" id="tabTier">Tier-List-Modus</button>
+      <button class="mode-tab" data-mode="smash" id="tabSmash">Smash or Pass</button>
+    </div>
+    <div class="volume-control" id="volumeControl">
+      <span class="volume-icon" id="volumeIcon">🔊</span>
+      <input type="range" id="volumeSlider" min="0" max="100" value="43" aria-label="Lautstärke">
+    </div>
+
+    <div class="field">
+      <label for="username">AniList-Username</label>
+      <input type="text" id="username" placeholder="z. B. dein_anilist_name" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="field">
+      <label for="statusFilter">Anime-Status</label>
+      <select id="statusFilter">
+        <option value="COMPLETED,CURRENT" selected>Abgeschlossen + Laufend</option>
+        <option value="COMPLETED">Nur abgeschlossen</option>
+        <option value="COMPLETED,CURRENT,PAUSED,REPEATING">Alles außer abgebrochen/geplant</option>
+      </select>
+    </div>
+
+    <div class="field" id="countField" style="display:none;">
+      <label for="count">Anzahl der Waifus</label>
+      <input type="number" id="count" min="0" max="1000" value="0">
+      <small style="color:var(--muted);font-size:11px;">0 = alle verfügbaren Waifus (kein Limit)</small>
+    </div>
+
+    <div class="field" id="animeField" style="display:none;">
+      <label for="animeFilter">Anime-Filter (optional)</label>
+      <input type="text" id="animeFilter" placeholder="z. B. Attack on Titan" autocomplete="off">
+    </div>
+
+    <button id="rollBtn">Waifu würfeln</button>
+    <div id="status" aria-live="polite"></div>
+
+    <!-- Single Roll Result -->
+    <section id="rollResult" aria-live="polite">
+      <div class="single-card">
+        <img id="charImg" src="" alt="">
+        <div class="single-info">
+          <h2 id="charName"></h2>
+          <p id="fromAnime"></p>
+        </div>
+      </div>
+      <div class="meta">
+        <span id="poolSize"></span>
+        <span>Cache: 1 Stunde</span>
+      </div>
+    </section>
+
+    <!-- Tier List Result -->
+    <section id="tierMode" aria-live="polite">
+      <div class="tier-toolbar">
+        <button id="clearTierBtn" type="button">Tier-List leeren</button>
+        <button id="rerollTierBtn" type="button">Neu würfeln</button>
+        <button id="addMoreBtn" type="button">+ Mehr Waifus</button>
+        <button id="shareTierBtn" type="button" style="display:none;">Share Tier List</button>
+      </div>
+      <div class="field" id="shareInputField" style="display:none;">
+        <label for="shareLink">Share Link</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="shareLink" placeholder="Link zum Teilen" readonly style="flex:1;">
+          <button id="copyLinkBtn">Kopieren</button>
+        </div>
+      </div>
+      <div class="field" id="importField" style="display:none;">
+        <label for="importLink">Import Tier List</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="importLink" placeholder="Füge hier einen Share-Link ein">
+          <button id="importBtn">Import</button>
+        </div>
+      </div>
+      <div class="tier-list" id="tierList"></div>
+      <div class="tier-count" id="tierCount"></div>
+    </section>
+
+    <!-- Smash or Pass Result -->
+    <section id="smashMode" aria-live="polite">
+      <div class="smash-toolbar">
+        <button id="newSmashGameBtn" type="button">Neues Spiel starten</button>
+        <button id="revealSummaryBtn" type="button" style="display:none;">Summary anzeigen</button>
+      </div>
+      <div class="smash-card" id="smashCard" style="display:none;">
+        <img id="smashCharImg" src="" alt="">
+        <div class="smash-indicator" id="smashIndicator"></div>
+        <div class="smash-info">
+          <h2 id="smashCharName"></h2>
+          <p id="smashFromAnime"></p>
+        </div>
+        <div class="smash-actions">
+          <button class="smash-btn pass" id="passBtn" type="button" aria-label="Pass">✕</button>
+          <button class="smash-btn smash" id="smashBtn" type="button" aria-label="Smash">✓</button>
+        </div>
+      </div>
+      <div class="smash-progress" id="smashProgress"></div>
+      <div class="smash-summary" id="smashSummary">
+        <div class="summary-header">
+          <h3>🎯 Smash or Pass — Zusammenfassung</h3>
+          <button class="summary-toggle" id="closeSummaryBtn" type="button">Schließen</button>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-col smash">
+            <h4>💚 Smash (<span id="smashCount">0</span>)</h4>
+            <div class="summary-list" id="smashList"></div>
+          </div>
+          <div class="summary-col pass">
+            <h4>❤️ Pass (<span id="passCount">0</span>)</h4>
+            <div class="summary-list" id="passList"></div>
+          </div>
+        </div>
+        <div class="summary-stats">
+          <span>Gesamt: <span id="totalSmashCount">0</span> Smash / <span id="totalPassCount">0</span> Pass</span>
+        </div>
+      </div>
+    </section>
+
+    <p class="hint">
+      Die Website nutzt die öffentliche <a href="https://anilist.co/api/v2/doc/" target="_blank" rel="noopener noreferrer">AniList API</a>.
+      Deine Liste muss öffentlich sichtbar sein.
+    </p>
+  </main>
+
+  <script>
+    const API_URL = "https://graphql.anilist.co";
+    const QUERY = `
+      query ($name: String, $statuses: [MediaListStatus]) {
+        MediaListCollection(userName: $name, type: ANIME, status_in: $statuses) {
+          lists {
+            entries {
+              media {
+                title { romaji english }
+                characters(perPage: 25, sort: ROLE) {
+                  nodes {
+                    id
+                    name { full native }
+                    image { large }
+                    gender
+                  }
+                }
+              }
+            }
+          }
+        }
+      }`;
+
+    const CACHE_KEY_PREFIX = "anilistWaifuCache_v1_";
+    const CACHE_DURATION = 60 * 60 * 1000;
+    const TIERS = ["S", "A", "B", "C", "D", "Unranked"];
+    const TIER_COLORS = {
+      S: "#ff4444",
+      A: "#ff6644",
+      B: "#ffaa44",
+      C: "#88cc44",
+      D: "#ff6699",
+      Unranked: "#6c757d",
+    };
+
+    const usernameInput = document.getElementById("username");
+    const statusFilter = document.getElementById("statusFilter");
+    const rollBtn = document.getElementById("rollBtn");
+    const statusEl = document.getElementById("status");
+    const countField = document.getElementById("countField");
+    const animeField = document.getElementById("animeField");
+    const countInput = document.getElementById("count");
+    const animeFilterInput = document.getElementById("animeFilter");
+    const rollResult = document.getElementById("rollResult");
+    const tierMode = document.getElementById("tierMode");
+    const tierList = document.getElementById("tierList");
+    const tierCount = document.getElementById("tierCount");
+    const charImg = document.getElementById("charImg");
+    const charName = document.getElementById("charName");
+    const fromAnime = document.getElementById("fromAnime");
+    const poolSize = document.getElementById("poolSize");
+    const clearTierBtn = document.getElementById("clearTierBtn");
+    const rerollTierBtn = document.getElementById("rerollTierBtn");
+
+    let currentMode = "roll";
+    let currentCharacters = [];
+    let currentPool = [];
+    let tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
+
+    // --- Global Volume ---
+    let masterVolume = 0.43; // 43% default
+
+    // --- Sound Effects ---
+    function playSound(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const baseGain = 0.2;
+      gain.gain.setValueAtTime(baseGain * masterVolume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01 * masterVolume, ctx.currentTime + 0.15);
+      if (type === "click") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+      } else if (type === "pop") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1);
+      } else if (type === "whoosh") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(400, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2);
+      } else if (type === "success") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16);
+      } else if (type === "error") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.25);
+      }
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    }
+
+    // Gespeicherten Nutzernamen beim Laden wiederherstellen
+    try {
+      const savedUsername = localStorage.getItem("anilistUsername");
+      if (savedUsername) usernameInput.value = savedUsername;
+    } catch (error) {
+      // localStorage ist in einigen Browser-Kontexten nicht verfügbar
+    }
+
+    // Mode tabs
+    document.querySelectorAll(".mode-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        currentMode = tab.dataset.mode;
+        playSound("click");
+        updateModeTabs();
+      });
+    });
+
+    rollBtn.addEventListener("click", () => {
+      playSound("click");
+      if (currentMode === "roll") rollSingleWaifu();
+      else if (currentMode === "tier") rollTierList();
+      else startSmashGame();
+    });
+    usernameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        playSound("click");
+        if (currentMode === "roll") rollSingleWaifu();
+        else if (currentMode === "tier") rollTierList();
+        else startSmashGame();
+      }
+    });
+    clearTierBtn.addEventListener("click", () => {
+      playSound("pop");
+      tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
+      renderTierList();
+    });
+    rerollTierBtn.addEventListener("click", () => {
+      playSound("pop");
+      rollTierList();
+    });
+    document.getElementById("addMoreBtn").addEventListener("click", () => {
+      playSound("pop");
+      addMoreWaifus();
+    });
+
+    // Volume slider
+    const volumeSlider = document.getElementById("volumeSlider");
+    const volumeIcon = document.getElementById("volumeIcon");
+    volumeSlider.addEventListener("input", () => {
+      masterVolume = volumeSlider.value / 100;
+      updateVolumeIcon();
+    });
+    function updateVolumeIcon() {
+      if (masterVolume === 0) volumeIcon.textContent = "🔇";
+      else if (masterVolume < 0.3) volumeIcon.textContent = "🔈";
+      else if (masterVolume < 0.7) volumeIcon.textContent = "🔉";
+      else volumeIcon.textContent = "🔊";
+    }
+    updateVolumeIcon();
+
+    async function rollSingleWaifu() {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        playSound("error");
+        usernameInput.focus();
+        return;
+      }
+      try { localStorage.setItem("anilistUsername", username); } catch (error) {}
+
+      const statuses = statusFilter.value.split(",");
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      rollBtn.disabled = true;
+      rollResult.style.display = "none";
+      setStatus("Scanne AniList-Liste …");
+
+      try {
+        let characters = await getCached(cacheKey);
+        if (!characters) {
+          characters = await fetchCharacters(username, statuses);
+          await setCached(cacheKey, characters);
+        }
+        const pick = characters[Math.floor(Math.random() * characters.length)];
+        charImg.src = pick.image;
+        charName.textContent = pick.name;
+        fromAnime.textContent = `aus: ${pick.anime}`;
+        poolSize.textContent = `${characters.length} Charaktere im Pool`;
+        rollResult.style.display = "block";
+        setStatus(`${characters.length} Charaktere im Pool · Cache 1h`);
+        playSound("success");
+      } catch (error) {
+        setStatus(`Fehler: ${error.message}`);
+        playSound("error");
+      } finally {
+        rollBtn.disabled = false;
+      }
+    }
+
+    async function rollTierList() {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        usernameInput.focus();
+        return;
+      }
+      try { localStorage.setItem("anilistUsername", username); } catch (error) {}
+
+      const desiredCount = Math.max(1, Math.min(30, parseInt(countInput.value, 10) || 10));
+      const animeFilter = animeFilterInput.value.trim().toLowerCase();
+      const statuses = statusFilter.value.split(",");
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      rollBtn.disabled = true;
+      setStatus("Scanne AniList-Liste …");
+
+      try {
+        let characters = await getCached(cacheKey);
+        if (!characters) {
+          characters = await fetchCharacters(username, statuses);
+          await setCached(cacheKey, characters);
+        }
+        if (animeFilter) {
+          characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
+          if (characters.length === 0) {
+            throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+          }
+        }
+        const shuffled = characters.slice().sort(() => 0.5 - Math.random());
+        const picked = shuffled.slice(0, desiredCount);
+        if (picked.length === 0) {
+          throw new Error("Nicht genug Charaktere für die gewünschte Anzahl.");
+        }
+        currentCharacters = picked;
+        currentPool = picked;
+        tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: picked };
+        renderTierList();
+        setStatus(`${characters.length} Charaktere im Pool · ${picked.length} Waifus gewürfelt · Cache 1h`);
+        playSound("success");
+      } catch (error) {
+        setStatus(`Fehler: ${error.message}`);
+        playSound("error");
+      } finally {
+        rollBtn.disabled = false;
+      }
+    }
+
+    async function addMoreWaifus() {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        playSound("error");
+        usernameInput.focus();
+        return;
+      }
+
+      const desiredCount = Math.max(1, Math.min(30, parseInt(countInput.value, 10) || 10));
+      const animeFilter = animeFilterInput.value.trim().toLowerCase();
+      const statuses = statusFilter.value.split(",");
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      rollBtn.disabled = true;
+      setStatus("Würfle weitere Waifus …");
+
+      try {
+        let characters = await getCached(cacheKey);
+        if (!characters) {
+          characters = await fetchCharacters(username, statuses);
+          await setCached(cacheKey, characters);
+        }
+        if (animeFilter) {
+          characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
+          if (characters.length === 0) {
+            throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+          }
+        }
+
+        // Filter out already existing characters
+        const existingIds = new Set(currentCharacters.map(c => c.id));
+        const available = characters.filter(c => !existingIds.has(c.id));
+        
+        if (available.length === 0) {
+          setStatus("Keine neuen Waifus verfügbar (alle bereits in der Liste).");
+          playSound("error");
+          rollBtn.disabled = false;
+          return;
+        }
+
+        const shuffled = available.slice().sort(() => 0.5 - Math.random());
+        const picked = shuffled.slice(0, desiredCount);
+        
+        if (picked.length === 0) {
+          setStatus("Keine neuen Waifus verfügbar.");
+          playSound("error");
+          rollBtn.disabled = false;
+          return;
+        }
+
+        // Add to Unranked and currentCharacters
+        tierState.Unranked = [...tierState.Unranked, ...picked];
+        currentCharacters = [...currentCharacters, ...picked];
+        renderTierList();
+        setStatus(`${picked.length} neue Waifus hinzugefügt · ${characters.length} im Pool · Cache 1h`);
+        playSound("pop");
+      } catch (error) {
+        setStatus(`Fehler: ${error.message}`);
+        playSound("error");
+      } finally {
+        rollBtn.disabled = false;
+      }
+    }
+
+    async function fetchCharacters(username, statuses) {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ query: QUERY, variables: { name: username, statuses } }),
+      });
+      if (!response.ok) throw new Error(`AniList antwortete mit Status ${response.status}`);
+      const json = await response.json();
+      if (json.errors) throw new Error(json.errors[0]?.message || "Unbekannter AniList-Fehler");
+      const characters = extractCharacters(json.data?.MediaListCollection?.lists || []);
+      if (characters.length === 0) throw new Error("Keine weiblichen Charaktere gefunden. Ist deine Liste öffentlich und enthält Anime?");
+      return characters;
+    }
+
+    function extractCharacters(lists) {
+      const seen = new Map();
+      for (const list of lists) {
+        for (const entry of list.entries) {
+          const media = entry.media;
+          const title = media.title.english || media.title.romaji;
+          for (const character of media.characters.nodes) {
+            if (character.gender !== "Female") continue;
+            if (!seen.has(character.id) && character.image?.large) {
+              seen.set(character.id, {
+                id: character.id,
+                name: character.name.full || character.name.native,
+                image: character.image.large,
+                anime: title,
+              });
+            }
+          }
+        }
+      }
+      return Array.from(seen.values());
+    }
+
+    function getCached(key) {
+      return new Promise((resolve) => {
+        try {
+          const entry = JSON.parse(localStorage.getItem(key));
+          if (entry && Date.now() - entry.ts < CACHE_DURATION) resolve(entry.characters);
+          else resolve(null);
+        } catch (error) { resolve(null); }
+      });
+    }
+
+    function setCached(key, characters) {
+      return new Promise((resolve) => {
+        try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), characters })); } catch (error) {}
+        resolve();
+      });
+    }
+
+    function setStatus(message) { statusEl.textContent = message; }
+
+    function renderTierList() {
+      tierList.innerHTML = "";
+      TIERS.forEach(tier => {
+        const row = document.createElement("div");
+        row.className = "tier-row";
+        const label = document.createElement("div");
+        label.className = `tier-label ${tier}`;
+        label.textContent = tier;
+        const drop = document.createElement("div");
+        drop.className = "tier-drop";
+        drop.dataset.tier = tier;
+        drop.addEventListener("dragover", handleDragOver);
+        drop.addEventListener("dragleave", handleDragLeave);
+        drop.addEventListener("drop", handleDrop);
+        tierState[tier].forEach(char => drop.appendChild(createChip(char, tier)));
+        row.appendChild(label);
+        row.appendChild(drop);
+        tierList.appendChild(row);
+      });
+      updateTierCount();
+    }
+
+    function createChip(character, tier) {
+      const chip = document.createElement("div");
+      chip.className = "waifu-chip";
+      chip.draggable = true;
+      chip.dataset.id = character.id;
+      chip.dataset.tier = tier;
+      chip.innerHTML = `
+        <img src="${character.image}" alt="${character.name}">
+        <span>${character.name}</span>
+        <span class="remove" title="Entfernen">✕</span>
+      `;
+      chip.addEventListener("dragstart", handleDragStart);
+      chip.addEventListener("dragend", handleDragEnd);
+      chip.querySelector(".remove").addEventListener("click", (event) => {
+        event.stopPropagation();
+        const sourceTier = chip.dataset.tier;
+        tierState[sourceTier] = tierState[sourceTier].filter(c => c.id !== character.id);
+        chip.remove();
+        updateTierCount();
+      });
+      return chip;
+    }
+
+    function handleDragStart(event) {
+      const chip = event.target.closest(".waifu-chip");
+      if (!chip) return;
+      event.dataTransfer.setData("text/plain", JSON.stringify({ id: chip.dataset.id, tier: chip.dataset.tier }));
+      event.dataTransfer.effectAllowed = "move";
+      chip.classList.add("dragging");
+    }
+    function handleDragEnd(event) {
+      const chip = event.target.closest(".waifu-chip");
+      if (chip) chip.classList.remove("dragging");
+      document.querySelectorAll(".tier-drop").forEach(drop => drop.classList.remove("drag-over"));
+    }
+    function handleDragOver(event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      event.currentTarget.classList.add("drag-over");
+    }
+    function handleDragLeave(event) {
+      event.currentTarget.classList.remove("drag-over");
+    }
+    function handleDrop(event) {
+      event.preventDefault();
+      const drop = event.currentTarget;
+      drop.classList.remove("drag-over");
+      const data = JSON.parse(event.dataTransfer.getData("text/plain"));
+      if (!data) return;
+      const character = currentCharacters.find(c => String(c.id) === String(data.id));
+      if (!character) return;
+      const sourceTier = data.tier;
+      const targetTier = drop.dataset.tier;
+      tierState[sourceTier] = tierState[sourceTier].filter(c => c.id !== character.id);
+      if (!tierState[targetTier].some(c => c.id === character.id)) {
+        tierState[targetTier].push(character);
+      }
+      renderTierList();
+      // Sync currentCharacters with tierState
+      currentCharacters = [];
+      TIERS.forEach(tier => {
+        currentCharacters = currentCharacters.concat(tierState[tier]);
+      });
+    }
+
+    function updateTierCount() {
+      const total = TIERS.reduce((sum, tier) => sum + tierState[tier].length, 0);
+      tierCount.textContent = `${total} Waifus auf der Tier-List · Ziehe die Karten per Drag & Drop in die Spalten`;
+    }
+
+    // Save to localStorage with unique key
+    function saveTierList(key) {
+      try { localStorage.setItem(key, JSON.stringify(tierState)); } catch (error) {}
+    }
+
+    // Load from localStorage
+    function loadTierList(key) {
+      try {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === "object") {
+            tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [], ...parsed };
+            return true;
+          }
+        }
+      } catch (error) {}
+      return false;
+    }
+
+    // Generate share link
+    function generateShareLink() {
+      const data = { c: currentCharacters.map(c => ({ id: c.id, n: c.name, i: c.image, a: c.anime })), t: tierState };
+      const encoded = btoa(JSON.stringify(data));
+      return `${location.origin}${location.pathname}#${encoded}`;
+    }
+
+    // Import tier list from URL hash
+    function importFromHash() {
+      const hash = location.hash.substring(1);
+      if (!hash) return false;
+      try {
+        const data = JSON.parse(atob(hash));
+        if (data.c && Array.isArray(data.c)) {
+          currentCharacters = data.c;
+          currentPool = data.c;
+          tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [], ...(data.t || {}) };
+          renderTierList();
+          return true;
+        }
+      } catch (error) {}
+      return false;
+    }
+
+    // Toggle share UI visibility
+    function toggleShareUI() {
+      const shareBtn = document.getElementById("shareTierBtn");
+      const shareField = document.getElementById("shareInputField");
+      const importField = document.getElementById("importField");
+      const isVisible = shareField.style.display !== "none";
+      shareField.style.display = isVisible ? "none" : "block";
+      importField.style.display = isVisible ? "none" : "block";
+      shareBtn.style.display = isVisible ? "none" : "inline-block";
+    }
+
+    // Share button event
+    document.getElementById("shareTierBtn").addEventListener("click", () => {
+      const link = generateShareLink();
+      document.getElementById("shareLink").value = link;
+      toggleShareUI();
+    });
+
+    // Copy link
+    document.getElementById("copyLinkBtn").addEventListener("click", () => {
+      const link = document.getElementById("shareLink").value;
+      navigator.clipboard.writeText(link).then(() => {
+        setStatus("Link kopiert!");
+      }).catch(() => {
+        document.getElementById("shareLink").select();
+        document.execCommand("copy");
+        setStatus("Link kopiert!");
+      });
+    });
+
+    // Import button
+    document.getElementById("importBtn").addEventListener("click", () => {
+      const input = document.getElementById("importLink");
+      const url = input.value.trim();
+      if (!url) { setStatus("Bitte einen Share-Link eingeben."); return; }
+      const hash = url.includes("#") ? url.split("#")[1] : url;
+      try {
+        const data = JSON.parse(atob(hash));
+        if (data.c && Array.isArray(data.c)) {
+          currentCharacters = data.c;
+          currentPool = data.c;
+          tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [], ...(data.t || {}) };
+          renderTierList();
+          setStatus("Tier-List importiert!");
+        } else {
+          setStatus("Ungültiger Link.");
+        }
+      } catch (error) {
+        setStatus("Ungültiger Link.");
+      }
+    });
+
+    // On page load, check for shared link
+    if (location.hash) {
+      if (importFromHash()) {
+        setStatus("Tier-List geladen!");
+      }
+    }
+
+    // Auto-save tier state to localStorage
+    let autoSaveTimer;
+    function scheduleAutoSave() {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        const key = `anilistTier_${usernameInput.value.trim()}_${statusFilter.value}`;
+        saveTierList(key);
+      }, 2000);
+    }
+    // Watch for tier changes
+    const observer = new MutationObserver(scheduleAutoSave);
+    observer.observe(tierList, { childList: true, subtree: true });
+
+    // Show share button when tier mode is active
+    const tierModeObserver = new MutationObserver(() => {
+      const shareBtn = document.getElementById("shareTierBtn");
+      if (tierMode.classList.contains("active")) {
+        shareBtn.style.display = "inline-block";
+      }
+    });
+    tierModeObserver.observe(tierMode, { attributes: true, attributeFilter: ["class"] });
+
+    // ============ SMASH OR PASS MODE ============
+    const smashMode = document.getElementById("smashMode");
+    const smashCard = document.getElementById("smashCard");
+    const smashCharImg = document.getElementById("smashCharImg");
+    const smashCharName = document.getElementById("smashCharName");
+    const smashFromAnime = document.getElementById("smashFromAnime");
+    const smashIndicator = document.getElementById("smashIndicator");
+    const smashBtn = document.getElementById("smashBtn");
+    const passBtn = document.getElementById("passBtn");
+    const smashProgress = document.getElementById("smashProgress");
+    const smashSummary = document.getElementById("smashSummary");
+    const smashList = document.getElementById("smashList");
+    const passList = document.getElementById("passList");
+    const smashCount = document.getElementById("smashCount");
+    const passCount = document.getElementById("passCount");
+    const totalSmashCount = document.getElementById("totalSmashCount");
+    const totalPassCount = document.getElementById("totalPassCount");
+    const newSmashGameBtn = document.getElementById("newSmashGameBtn");
+    const revealSummaryBtn = document.getElementById("revealSummaryBtn");
+    const closeSummaryBtn = document.getElementById("closeSummaryBtn");
+
+    let smashPool = [];
+    let smashIndex = 0;
+    let smashResults = { smash: [], pass: [] };
+
+    function playSound(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const baseGain = 0.3;
+      gain.gain.setValueAtTime(baseGain * masterVolume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01 * masterVolume, ctx.currentTime + 0.2);
+      if (type === "smash") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.15); // C6
+      } else if (type === "pass") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
+        osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.2); // A2
+      } else if (type === "pop") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+        osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1); // A6
+      } else if (type === "whoosh") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(400, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.25);
+      }
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    }
+
+    function updateModeTabs() {
+      document.querySelectorAll(".mode-tab").forEach(t => t.classList.toggle("active", t.dataset.mode === currentMode));
+      rollResult.style.display = currentMode === "roll" ? "block" : "none";
+      tierMode.classList.toggle("active", currentMode === "tier");
+      smashMode.classList.toggle("active", currentMode === "smash");
+      countField.style.display = (currentMode === "tier" || currentMode === "smash") ? "block" : "none";
+      animeField.style.display = currentMode === "tier" ? "block" : "none";
+      rollBtn.textContent = currentMode === "tier" ? "Waifus würfeln" : (currentMode === "smash" ? "Neues Spiel" : "Waifu würfeln");
+      if (currentMode === "tier" && tierList.children.length === 0) renderTierList();
+      if (currentMode === "smash") {
+        if (smashPool.length === 0) {
+          smashCard.style.display = "none";
+          smashProgress.textContent = "";
+          revealSummaryBtn.style.display = "none";
+        } else {
+          revealSummaryBtn.style.display = "inline-block";
+        }
+      }
+    }
+
+    // Re-bind mode tabs to include smash
+    document.querySelectorAll(".mode-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        currentMode = tab.dataset.mode;
+        updateModeTabs();
+      });
+    });
+
+    // Override rollBtn click
+    rollBtn.removeEventListener("click", rollBtn.onclick);
+    rollBtn.addEventListener("click", () => {
+      if (currentMode === "roll") rollSingleWaifu();
+      else if (currentMode === "tier") rollTierList();
+      else startSmashGame();
+    });
+
+    usernameInput.removeEventListener("keydown", usernameInput.onkeydown);
+    usernameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        if (currentMode === "roll") rollSingleWaifu();
+        else if (currentMode === "tier") rollTierList();
+        else startSmashGame();
+      }
+    });
+
+    async function startSmashGame() {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        usernameInput.focus();
+        return;
+      }
+      try { localStorage.setItem("anilistUsername", username); } catch (error) {}
+
+      const desiredCount = parseInt(countInput.value, 10) || 0; // 0 = alle verfügbaren
+      const animeFilter = animeFilterInput.value.trim().toLowerCase();
+      const statuses = statusFilter.value.split(",");
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      rollBtn.disabled = true;
+      setStatus("Lade Waifus für Smash or Pass …");
+
+      try {
+        let characters = await getCached(cacheKey);
+        if (!characters) {
+          characters = await fetchCharacters(username, statuses);
+          await setCached(cacheKey, characters);
+        }
+        if (animeFilter) {
+          characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
+          if (characters.length === 0) throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+        }
+        const shuffled = characters.slice().sort(() => 0.5 - Math.random());
+        smashPool = desiredCount > 0 ? shuffled.slice(0, desiredCount) : shuffled; // 0 = alle
+        smashIndex = 0;
+        smashResults = { smash: [], pass: [] };
+        smashCard.style.display = "block";
+        smashSummary.classList.remove("open");
+        revealSummaryBtn.style.display = "inline-block";
+        revealSummaryBtn.textContent = "Summary anzeigen";
+        showNextSmash();
+        setStatus(`${smashPool.length} Waifus geladen · Viel Spaß!`);
+      } catch (error) {
+        setStatus(`Fehler: ${error.message}`);
+      } finally {
+        rollBtn.disabled = false;
+      }
+    }
+
+    function showNextSmash() {
+      if (smashIndex >= smashPool.length) {
+        finishSmashGame();
+        return;
+      }
+      const char = smashPool[smashIndex];
+      smashCharImg.src = char.image;
+      smashCharName.textContent = char.name;
+      smashFromAnime.textContent = `aus: ${char.anime}`;
+      smashCard.classList.remove("swipe-left", "swipe-right");
+      smashIndicator.classList.remove("show", "smash", "pass");
+      smashIndicator.textContent = "";
+      smashProgress.textContent = `${smashIndex + 1} / ${smashPool.length}`;
+      smashBtn.disabled = false;
+      passBtn.disabled = false;
+    }
+
+    function handleSmashChoice(choice) {
+      if (smashIndex >= smashPool.length) return;
+      const char = smashPool[smashIndex];
+      smashResults[choice].push(char);
+      
+      // Visual feedback
+      smashCard.classList.add(choice === "smash" ? "swipe-right" : "swipe-left");
+      smashIndicator.classList.add("show", choice);
+      smashIndicator.textContent = choice === "smash" ? "💚" : "💔";
+      playSound(choice);
+      
+      // Live update summary if open
+      if (smashSummary.classList.contains("open")) {
+        renderSummary();
+      }
+      
+      smashBtn.disabled = true;
+      passBtn.disabled = true;
+      
+      setTimeout(() => {
+        smashIndex++;
+        smashCard.classList.remove("swipe-left", "swipe-right");
+        smashIndicator.classList.remove("show", "smash", "pass");
+        showNextSmash();
+      }, 400);
+    }
+
+    function finishSmashGame() {
+      smashCard.style.display = "none";
+      smashProgress.textContent = `Fertig! ${smashResults.smash.length} Smash / ${smashResults.pass.length} Pass`;
+      revealSummaryBtn.textContent = "Summary anzeigen";
+    }
+
+    function renderSummary() {
+      smashList.innerHTML = "";
+      passList.innerHTML = "";
+      smashResults.smash.forEach(c => smashList.appendChild(createSummaryItem(c)));
+      smashResults.pass.forEach(c => passList.appendChild(createSummaryItem(c)));
+      smashCount.textContent = smashResults.smash.length;
+      passCount.textContent = smashResults.pass.length;
+      totalSmashCount.textContent = smashResults.smash.length;
+      totalPassCount.textContent = smashResults.pass.length;
+      smashSummary.classList.add("open");
+      playSound("pop");
+    }
+
+    function createSummaryItem(char) {
+      const item = document.createElement("div");
+      item.className = "summary-item";
+      item.innerHTML = `<img src="${char.image}" alt="${char.name}"><span>${char.name} <small style="color:var(--muted)">(${char.anime})</small></span>`;
+      return item;
+    }
+
+    smashBtn.addEventListener("click", () => handleSmashChoice("smash"));
+    passBtn.addEventListener("click", () => handleSmashChoice("pass"));
+    newSmashGameBtn.addEventListener("click", startSmashGame);
+    revealSummaryBtn.addEventListener("click", () => {
+      if (!smashSummary.classList.contains("open")) {
+        renderSummary();
+        revealSummaryBtn.textContent = "Summary verstecken";
+      } else {
+        smashSummary.classList.remove("open");
+        revealSummaryBtn.textContent = "Summary anzeigen";
+      }
+    });
+    closeSummaryBtn.addEventListener("click", () => {
+      smashSummary.classList.remove("open");
+      revealSummaryBtn.textContent = "Summary anzeigen";
+    });
+
+    // Keyboard support for smash or pass
+    document.addEventListener("keydown", (e) => {
+      if (currentMode !== "smash" || smashCard.style.display === "none" || smashBtn.disabled) return;
+      if (e.key === "ArrowRight" || e.key === "Enter" || e.key === "y" || e.key === "Y") handleSmashChoice("smash");
+      else if (e.key === "ArrowLeft" || e.key === "Backspace" || e.key === "n" || e.key === "N") handleSmashChoice("pass");
+    });
+
+    // Touch swipe support
+    let touchStartX = 0;
+    smashCard.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    smashCard.addEventListener("touchend", e => {
+      if (smashBtn.disabled) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 60) handleSmashChoice(dx > 0 ? "smash" : "pass");
+    }, { passive: true });
+
+  </script>
+</body>
+</html>
