@@ -1305,29 +1305,12 @@
       tierListClone.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
       tierListClone.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
       tierListClone.querySelectorAll(".remove").forEach(el => el.style.display = "none");
-      container.appendChild(tierListClone);
+container.appendChild(tierListClone);
       
       document.body.appendChild(container);
-
-      // Wait for all images to load (for layout purposes)
-      await new Promise((resolve) => {
-        const images = container.querySelectorAll("img");
-        let loaded = 0;
-        if (images.length === 0) return resolve();
-        images.forEach(img => {
-          if (img.complete) {
-            loaded++;
-            if (loaded === images.length) resolve();
-          } else {
-            img.onload = img.onerror = () => {
-              loaded++;
-              if (loaded === images.length) resolve();
-            };
-          }
-        });
-        // Timeout fallback
-        setTimeout(resolve, 8000);
-      });
+      
+      // Small timeout to ensure layout is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Create canvas with high resolution
       const canvas = document.createElement("canvas");
@@ -1534,15 +1517,37 @@
     }
 
     async function drawImageWithCORS(ctx, url, x, y, width, height) {
+      // AniList CDN doesn't support CORS, use a proxy
+      const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+      
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
+        
+        // Timeout after 5 seconds
+        const timeoutId = setTimeout(() => {
+          img.onerror = null; // Prevent error handler from firing
+          reject(new Error('Image load timeout'));
+        }, 5000);
+        
         img.onload = () => {
+          clearTimeout(timeoutId);
           ctx.drawImage(img, x, y, width, height);
           resolve();
         };
-        img.onerror = reject;
-        img.src = url;
+        img.onerror = () => {
+          clearTimeout(timeoutId);
+          // Fallback: try without proxy (in case it's already CORS-enabled)
+          const fallbackImg = new Image();
+          fallbackImg.crossOrigin = "anonymous";
+          fallbackImg.onload = () => {
+            ctx.drawImage(fallbackImg, x, y, width, height);
+            resolve();
+          };
+          fallbackImg.onerror = reject;
+          fallbackImg.src = url;
+        };
+        img.src = proxyUrl;
       });
     }
 
