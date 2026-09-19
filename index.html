@@ -619,6 +619,7 @@
         <button id="rerollTierBtn" type="button">Neu würfeln</button>
         <button id="addMoreBtn" type="button">+ Mehr Waifus</button>
         <button id="shareTierBtn" type="button" style="display:none;">Share Tier List</button>
+        <button id="exportTierBtn" type="button">Als Bild exportieren</button>
       </div>
       <div class="field" id="shareInputField" style="display:none;">
         <label for="shareLink">Share Link</label>
@@ -1158,27 +1159,62 @@
       return false;
     }
 
-    // Generate share link
+    // Generate share link - store username + IDs to keep URL short
     function generateShareLink() {
-      const data = { c: currentCharacters.map(c => ({ id: c.id, n: c.name, i: c.image, a: c.anime })), t: tierState };
+      const data = { 
+        u: usernameInput.value.trim(),
+        ids: currentCharacters.map(c => c.id), 
+        t: Object.fromEntries(
+          TIERS.map(tier => [tier, tierState[tier].map(c => c.id)])
+        )
+      };
       const encoded = btoa(JSON.stringify(data));
       return `${location.origin}${location.pathname}#${encoded}`;
     }
 
-    // Import tier list from URL hash
-    function importFromHash() {
+    // Import tier list from URL hash - fetch fresh data from AniList
+    async function importFromHash() {
       const hash = location.hash.substring(1);
       if (!hash) return false;
       try {
         const data = JSON.parse(atob(hash));
-        if (data.c && Array.isArray(data.c)) {
-          currentCharacters = data.c;
-          currentPool = data.c;
-          tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [], ...(data.t || {}) };
+        if (data.ids && Array.isArray(data.ids)) {
+          setStatus("Lade Tier-List von AniList …");
+          const username = (data.u || usernameInput.value).trim();
+          if (!username) {
+            setStatus("Fehler: Kein AniList-Username im Share-Link.");
+            return false;
+          }
+          usernameInput.value = username;
+          // Fetch fresh character data for all IDs
+          const statuses = statusFilter.value.split(",");
+          const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+          let characters = await getCached(cacheKey);
+          if (!characters) {
+            characters = await fetchCharacters(username, statuses);
+            await setCached(cacheKey, characters);
+          }
+          const charMap = new Map(characters.map(c => [c.id, c]));
+          currentCharacters = data.ids.map(id => charMap.get(id)).filter(Boolean);
+          currentPool = [...currentCharacters];
+          
+          tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
+          if (data.t) {
+            TIERS.forEach(tier => {
+              const ids = data.t[tier] || [];
+              tierState[tier] = ids.map(id => charMap.get(id)).filter(Boolean);
+            });
+          } else {
+            tierState.Unranked = [...currentCharacters];
+          }
           renderTierList();
+          setStatus("Tier-List geladen!");
           return true;
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error("Import failed:", error);
+        setStatus("Fehler beim Laden der Tier-List.");
+      }
       return false;
     }
 
@@ -1212,22 +1248,213 @@
       });
     });
 
+    // Export tier list as image
+    document.getElementById("exportTierBtn").addEventListener("click", async () => {
+      setStatus("Erstelle Bild …");
+      try {
+        await exportTierListAsImage();
+        setStatus("Bild heruntergeladen!");
+      } catch (error) {
+        console.error("Export failed:", error);
+        setStatus("Fehler beim Export: " + error.message);
+      }
+    });
+
+    async function exportTierListAsImage() {
+      const tierListEl = document.getElementById("tierList");
+      if (!tierListEl || tierListEl.children.length === 0) {
+        throw new Error("Tier-List ist leer");
+      }
+
+      // Create a clean clone for rendering
+      const clone = tierListEl.cloneNode(true);
+      
+      // Remove drag-over classes and other UI artifacts
+      clone.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+      clone.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
+      clone.querySelectorAll(".remove").forEach(el => el.style.display = "none");
+
+      // Create container with proper styling
+      const container = document.createElement("div");
+      container.style.cssText = `
+        position: fixed;
+        left: -9999px;
+        top: -9999px;
+        background: var(--panel);
+        padding: 40px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--text);
+        max-width: 100%;
+      `;
+      
+      // Add title
+      const title = document.createElement("h1");
+      title.textContent = "AniList Waifu Tier List";
+      title.style.cssText = `
+        text-align: center;
+        color: var(--pink-2);
+        margin-bottom: 8px;
+        font-size: 28px;
+      `;
+      container.appendChild(title);
+      
+      const subtitle = document.createElement("p");
+      subtitle.textContent = `Erstellt für @${usernameInput.value.trim() || "User"} · ${new Date().toLocaleDateString("de-DE")}`;
+      subtitle.style.cssText = `
+        text-align: center;
+        color: var(--muted);
+        margin-bottom: 32px;
+        font-size: 14px;
+      `;
+      container.appendChild(subtitle);
+      
+      container.appendChild(clone);
+      document.body.appendChild(container);
+
+      // Wait for images to load
+      await new Promise((resolve) => {
+        const images = container.querySelectorAll("img");
+        let loaded = 0;
+        if (images.length === 0) return resolve();
+        images.forEach(img => {
+          if (img.complete) {
+            loaded++;
+            if (loaded === images.length) resolve();
+          } else {
+            img.onload = img.onerror = () => {
+              loaded++;
+              if (loaded === images.length) resolve();
+            };
+          }
+        });
+        // Timeout fallback
+        setTimeout(resolve, 5000);
+      });
+
+      // Use canvas to render
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const scale = 2; // 2x for crisp output
+      
+      const rect = container.getBoundingClientRect();
+      canvas.width = Math.ceil(rect.width * scale);
+      canvas.height = Math.ceil(rect.height * scale);
+      ctx.scale(scale, scale);
+
+      // Fill background
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim() || "#1a1a22";
+      ctx.fillRect(0, 0, canvas.width / scale, canvas.height / scale);
+
+      // Use html2canvas-like approach via drawImage with foreignObject
+      // Since we can't directly draw HTML to canvas, we'll use a data URL approach
+      const svgData = new XMLSerializer().serializeToString(createSvgFromElement(container));
+      const img = new Image();
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+      });
+
+      ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      
+      // Download
+      const link = document.createElement("a");
+      link.download = `waifu-tierlist-${usernameInput.value.trim() || "user"}-${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(container);
+    }
+
+    function createSvgFromElement(element) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      svg.setAttribute("width", element.offsetWidth);
+      svg.setAttribute("height", element.offsetHeight);
+      
+      const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+      foreignObject.setAttribute("width", "100%");
+      foreignObject.setAttribute("height", "100%");
+      foreignObject.setAttribute("x", "0");
+      foreignObject.setAttribute("y", "0");
+      
+      // Clone styles
+      const styleClone = document.createElement("style");
+      styleClone.textContent = `
+        * { box-sizing: border-box; }
+        :root {
+          --bg: #0d0d12;
+          --panel: #1a1a22;
+          --panel-2: #222229;
+          --text: #e8e8ef;
+          --muted: #8a8a96;
+          --pink: #8B0000;
+          --pink-2: #DC143C;
+          --border: #2a2a3a;
+        }
+        .tier-list { display: flex; flex-direction: column; gap: 10px; }
+        .tier-row { display: grid; grid-template-columns: 48px 1fr; gap: 8px; min-height: 220px; }
+        .tier-label { display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border-radius: 8px; color: #14141c; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .tier-label.S { background: #8B0000; color: #fff; }
+        .tier-label.A { background: #B22222; color: #fff; }
+        .tier-label.B { background: #4169E1; color: #fff; }
+        .tier-label.C { background: #2E8B57; color: #fff; }
+        .tier-label.D { background: #DC143C; color: #fff; }
+        .tier-label.Unranked { background: #6c757d; color: white; }
+        .tier-drop { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px; border: 2px dashed var(--border); border-radius: 8px; background: #181822; min-height: 220px; }
+        .waifu-chip { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-2); }
+        .waifu-chip img { width: 180px; height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid var(--pink); }
+        .waifu-chip span { font-size: 12px; text-align: center; color: var(--text); line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .tier-count { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
+      `;
+      
+      const contentClone = element.cloneNode(true);
+      foreignObject.appendChild(styleClone);
+      foreignObject.appendChild(contentClone);
+      svg.appendChild(foreignObject);
+      
+      return svg;
+    }
+
     // Import button
-    document.getElementById("importBtn").addEventListener("click", () => {
+    document.getElementById("importBtn").addEventListener("click", async () => {
       const input = document.getElementById("importLink");
       const url = input.value.trim();
       if (!url) { setStatus("Bitte einen Share-Link eingeben."); return; }
       const hash = url.includes("#") ? url.split("#")[1] : url;
       try {
         const data = JSON.parse(atob(hash));
-        if (data.c && Array.isArray(data.c)) {
-          currentCharacters = data.c;
-          currentPool = data.c;
-          tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [], ...(data.t || {}) };
+        if (data.ids && Array.isArray(data.ids)) {
+          setStatus("Lade Tier-List von AniList …");
+          const username = (data.u || usernameInput.value).trim();
+          if (!username) { setStatus("Fehler: Kein AniList-Username im Share-Link."); return; }
+          usernameInput.value = username;
+          const statuses = statusFilter.value.split(",");
+          const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+          let characters = await getCached(cacheKey);
+          if (!characters) {
+            characters = await fetchCharacters(username, statuses);
+            await setCached(cacheKey, characters);
+          }
+          const charMap = new Map(characters.map(c => [c.id, c]));
+          currentCharacters = data.ids.map(id => charMap.get(id)).filter(Boolean);
+          currentPool = [...currentCharacters];
+          
+          tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
+          if (data.t) {
+            TIERS.forEach(tier => {
+              const ids = data.t[tier] || [];
+              tierState[tier] = ids.map(id => charMap.get(id)).filter(Boolean);
+            });
+          } else {
+            tierState.Unranked = [...currentCharacters];
+          }
           renderTierList();
           setStatus("Tier-List importiert!");
         } else {
-          setStatus("Ungültiger Link.");
+          setStatus("Ungültiger Link (altes Format?).");
         }
       } catch (error) {
         setStatus("Ungültiger Link.");
@@ -1236,9 +1463,9 @@
 
     // On page load, check for shared link
     if (location.hash) {
-      if (importFromHash()) {
-        setStatus("Tier-List geladen!");
-      }
+      importFromHash().then(loaded => {
+        if (loaded) setStatus("Tier-List geladen!");
+      });
     }
 
     // Auto-save tier state to localStorage
