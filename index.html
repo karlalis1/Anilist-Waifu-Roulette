@@ -726,7 +726,14 @@
                     name { full native }
                     image { large }
                     gender
-                    role
+                  }
+                }
+                mainCharacters(perPage: 25) {
+                  nodes {
+                    id
+                    name { full native }
+                    image { large }
+                    gender
                   }
                 }
               }
@@ -1080,9 +1087,11 @@
           const title = lang === "en"
             ? (media.title.english || media.title.romaji)
             : media.title.romaji;
-          for (const character of media.characters.nodes) {
+          const nodes = role === "MAIN"
+            ? (media.mainCharacters?.nodes || [])
+            : (media.characters?.nodes || []);
+          for (const character of nodes) {
             if (character.gender !== "Female") continue;
-            if (role === "MAIN" && character.role !== "MAIN") continue;
             if (!seen.has(character.id) && character.image?.large) {
               seen.set(character.id, {
                 id: character.id,
