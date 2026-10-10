@@ -37,17 +37,23 @@
       z-index: 0;
     }
 .app {
-       width: 100%;
-       max-width: 1400px;
-       margin: 0 auto;
-       background: var(--panel);
-       border: 1px solid var(--border);
-       border-radius: 16px;
-       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-       padding: 26px;
-       position: relative;
-       z-index: 1;
-     }
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        padding: 26px;
+        position: relative;
+        z-index: 1;
+      }
+    #tierMode.active ~ .hint {
+      display: none;
+    }
+    #tierMode.active + .hint {
+      display: none;
+    }
     h1 {
       font-size: 24px;
       color: var(--pink-2);
@@ -248,6 +254,7 @@
     .single-info { padding: 14px; }
     .single-info h2 { font-size: 18px; margin-bottom: 4px; color: #fff; }
     .single-info p { font-size: 12px; color: var(--muted); }
+    .open-hint { font-size: 10px; color: var(--pink); margin-top: 6px; opacity: 0.7; }
     .meta {
       display: flex;
       justify-content: space-between;
@@ -275,12 +282,14 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      width: 100%;
     }
     .tier-row {
       display: grid;
-      grid-template-columns: 48px 1fr;
-      gap: 8px;
+      grid-template-columns: 60px 1fr;
+      gap: 12px;
       min-height: 220px;
+      width: 100%;
     }
     .tier-label {
       display: flex;
@@ -448,6 +457,7 @@
     }
     .smash-info h2 { font-size: 20px; margin-bottom: 6px; color: #fff; }
     .smash-info p { font-size: 13px; color: var(--muted); }
+    .smash-info .open-hint { font-size: 11px; color: var(--pink); margin-top: 8px; opacity: 0.7; }
     .smash-actions {
       display: flex;
       justify-content: center;
@@ -582,6 +592,20 @@
         <option value="COMPLETED,CURRENT,PAUSED,REPEATING">Alles außer abgebrochen/geplant</option>
       </select>
     </div>
+    <div class="field">
+      <label for="language">Sprache</label>
+      <select id="language">
+        <option value="de" selected>Deutsch</option>
+        <option value="en">Englisch</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="roleFilter">Charakter-Typ</label>
+      <select id="roleFilter">
+        <option value="MAIN" selected>Nur Hauptcharaktere</option>
+        <option value="ALL">Alle Charaktere</option>
+      </select>
+    </div>
 
     <div class="field" id="countField" style="display:none;">
       <label for="count">Anzahl der Waifus</label>
@@ -604,6 +628,7 @@
         <div class="single-info">
           <h2 id="charName"></h2>
           <p id="fromAnime"></p>
+          <p class="open-hint">🔍 Mittelklick zum Öffnen auf AniList</p>
         </div>
       </div>
       <div class="meta">
@@ -651,6 +676,7 @@
         <div class="smash-info">
           <h2 id="smashCharName"></h2>
           <p id="smashFromAnime"></p>
+          <p class="open-hint">🔍 Mittelklick zum Öffnen auf AniList</p>
         </div>
         <div class="smash-actions">
           <button class="smash-btn pass" id="passBtn" type="button" aria-label="Pass">✕</button>
@@ -700,6 +726,7 @@
                     name { full native }
                     image { large }
                     gender
+                    role
                   }
                 }
               }
@@ -722,6 +749,8 @@
 
     const usernameInput = document.getElementById("username");
     const statusFilter = document.getElementById("statusFilter");
+    const languageSelect = document.getElementById("language");
+    const roleFilter = document.getElementById("roleFilter");
     const rollBtn = document.getElementById("rollBtn");
     const statusEl = document.getElementById("status");
     const countField = document.getElementById("countField");
@@ -738,6 +767,7 @@
     const poolSize = document.getElementById("poolSize");
     const clearTierBtn = document.getElementById("clearTierBtn");
     const rerollTierBtn = document.getElementById("rerollTierBtn");
+    const singleCard = document.querySelector(".single-card");
 
     let currentMode = "roll";
     let currentCharacters = [];
@@ -791,6 +821,18 @@
       // localStorage ist in einigen Browser-Kontexten nicht verfügbar
     }
 
+    // Gespeicherte Sprache laden
+    try {
+      const savedLanguage = localStorage.getItem("language");
+      if (savedLanguage) languageSelect.value = savedLanguage;
+    } catch (error) {}
+
+    // Gespeicherten Rollen-Filter laden
+    try {
+      const savedRoleFilter = localStorage.getItem("roleFilter");
+      if (savedRoleFilter) roleFilter.value = savedRoleFilter;
+    } catch (error) {}
+
     // Mode tabs
     document.querySelectorAll(".mode-tab").forEach(tab => {
       tab.addEventListener("click", () => {
@@ -843,6 +885,15 @@
     }
     updateVolumeIcon();
 
+    // Mittelklick auf Single-Card: Charakter auf AniList öffnen
+    let currentPickId = null;
+    singleCard.addEventListener("click", (e) => {
+      if (e.button !== 1) return; // Nur Mittelmaus
+      if (currentPickId) {
+        window.open(`https://anilist.co/character/${currentPickId}`, "_blank", "noopener");
+      }
+    });
+
     async function rollSingleWaifu() {
       const username = usernameInput.value.trim();
       if (!username) {
@@ -853,8 +904,14 @@
       }
       try { localStorage.setItem("anilistUsername", username); } catch (error) {}
 
+      const lang = languageSelect.value;
+      try { localStorage.setItem("language", lang); } catch (error) {}
+
+      const role = roleFilter.value;
+      try { localStorage.setItem("roleFilter", role); } catch (error) {}
+
       const statuses = statusFilter.value.split(",");
-      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
       rollResult.style.display = "none";
       setStatus("Scanne AniList-Liste …");
@@ -862,10 +919,11 @@
       try {
         let characters = await getCached(cacheKey);
         if (!characters) {
-          characters = await fetchCharacters(username, statuses);
+          characters = await fetchCharacters(username, statuses, lang, role);
           await setCached(cacheKey, characters);
         }
         const pick = characters[Math.floor(Math.random() * characters.length)];
+        currentPickId = pick.id;
         charImg.src = pick.image;
         charName.textContent = pick.name;
         fromAnime.textContent = `aus: ${pick.anime}`;
@@ -890,17 +948,23 @@
       }
       try { localStorage.setItem("anilistUsername", username); } catch (error) {}
 
+      const lang = languageSelect.value;
+      try { localStorage.setItem("language", lang); } catch (error) {}
+
+      const role = roleFilter.value;
+      try { localStorage.setItem("roleFilter", role); } catch (error) {}
+
       const desiredCount = Math.max(1, Math.min(30, parseInt(countInput.value, 10) || 10));
       const animeFilter = animeFilterInput.value.trim().toLowerCase();
       const statuses = statusFilter.value.split(",");
-      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
       setStatus("Scanne AniList-Liste …");
 
       try {
         let characters = await getCached(cacheKey);
         if (!characters) {
-          characters = await fetchCharacters(username, statuses);
+          characters = await fetchCharacters(username, statuses, lang, role);
           await setCached(cacheKey, characters);
         }
         if (animeFilter) {
@@ -937,17 +1001,19 @@
         return;
       }
 
+      const lang = languageSelect.value;
+      const role = roleFilter.value;
       const desiredCount = Math.max(1, Math.min(30, parseInt(countInput.value, 10) || 10));
       const animeFilter = animeFilterInput.value.trim().toLowerCase();
       const statuses = statusFilter.value.split(",");
-      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
       setStatus("Würfle weitere Waifus …");
 
       try {
         let characters = await getCached(cacheKey);
         if (!characters) {
-          characters = await fetchCharacters(username, statuses);
+          characters = await fetchCharacters(username, statuses, lang, role);
           await setCached(cacheKey, characters);
         }
         if (animeFilter) {
@@ -992,7 +1058,7 @@
       }
     }
 
-    async function fetchCharacters(username, statuses) {
+    async function fetchCharacters(username, statuses, lang = "de", role = "MAIN") {
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -1001,19 +1067,22 @@
       if (!response.ok) throw new Error(`AniList antwortete mit Status ${response.status}`);
       const json = await response.json();
       if (json.errors) throw new Error(json.errors[0]?.message || "Unbekannter AniList-Fehler");
-      const characters = extractCharacters(json.data?.MediaListCollection?.lists || []);
+      const characters = extractCharacters(json.data?.MediaListCollection?.lists || [], lang, role);
       if (characters.length === 0) throw new Error("Keine weiblichen Charaktere gefunden. Ist deine Liste öffentlich und enthält Anime?");
       return characters;
     }
 
-    function extractCharacters(lists) {
+    function extractCharacters(lists, lang = "de", role = "MAIN") {
       const seen = new Map();
       for (const list of lists) {
         for (const entry of list.entries) {
           const media = entry.media;
-          const title = media.title.english || media.title.romaji;
+          const title = lang === "en"
+            ? (media.title.english || media.title.romaji)
+            : media.title.romaji;
           for (const character of media.characters.nodes) {
             if (character.gender !== "Female") continue;
+            if (role === "MAIN" && character.role !== "MAIN") continue;
             if (!seen.has(character.id) && character.image?.large) {
               seen.set(character.id, {
                 id: character.id,
@@ -1082,6 +1151,10 @@
       `;
       chip.addEventListener("dragstart", handleDragStart);
       chip.addEventListener("dragend", handleDragEnd);
+      chip.addEventListener("click", (e) => {
+        if (e.button !== 1) return; // Nur Mittelmaus
+        window.open(`https://anilist.co/character/${character.id}`, "_blank", "noopener");
+      });
       chip.querySelector(".remove").addEventListener("click", (event) => {
         event.stopPropagation();
         const sourceTier = chip.dataset.tier;
@@ -1571,10 +1644,12 @@ container.appendChild(tierListClone);
           if (!username) { setStatus("Fehler: Kein AniList-Username im Share-Link."); return; }
           usernameInput.value = username;
           const statuses = statusFilter.value.split(",");
-          const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+          const lang = languageSelect.value;
+          const role = roleFilter.value;
+          const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
           let characters = await getCached(cacheKey);
           if (!characters) {
-            characters = await fetchCharacters(username, statuses);
+            characters = await fetchCharacters(username, statuses, lang, role);
             await setCached(cacheKey, characters);
           }
           const charMap = new Map(characters.map(c => [c.id, c]));
@@ -1738,17 +1813,23 @@ container.appendChild(tierListClone);
       }
       try { localStorage.setItem("anilistUsername", username); } catch (error) {}
 
+      const lang = languageSelect.value;
+      try { localStorage.setItem("language", lang); } catch (error) {}
+
+      const role = roleFilter.value;
+      try { localStorage.setItem("roleFilter", role); } catch (error) {}
+
       const desiredCount = parseInt(countInput.value, 10) || 0; // 0 = alle verfügbaren
       const animeFilter = animeFilterInput.value.trim().toLowerCase();
       const statuses = statusFilter.value.split(",");
-      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}`;
+      const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
       setStatus("Lade Waifus für Smash or Pass …");
 
       try {
         let characters = await getCached(cacheKey);
         if (!characters) {
-          characters = await fetchCharacters(username, statuses);
+          characters = await fetchCharacters(username, statuses, lang, role);
           await setCached(cacheKey, characters);
         }
         if (animeFilter) {
@@ -1787,6 +1868,12 @@ container.appendChild(tierListClone);
       smashProgress.textContent = `${smashIndex + 1} / ${smashPool.length}`;
       smashBtn.disabled = false;
       passBtn.disabled = false;
+
+      // Mittelklick: Charakter auf AniList öffnen
+      smashCard.onclick = (e) => {
+        if (e.button !== 1) return;
+        window.open(`https://anilist.co/character/${char.id}`, "_blank", "noopener");
+      };
     }
 
     function handleSmashChoice(choice) {
