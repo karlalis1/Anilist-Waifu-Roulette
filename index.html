@@ -138,6 +138,41 @@
     .hint a { color: var(--pink-2); text-decoration: none; }
     .hint a:hover { text-decoration: underline; }
 
+    /* Source Selector */
+    .source-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .source-option {
+      padding: 8px 16px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+    .source-option:hover {
+      background: rgba(255, 95, 158, 0.1);
+      border-color: var(--pink);
+      color: var(--pink-2);
+    }
+    .source-option.active {
+      background: linear-gradient(135deg, var(--pink), var(--pink-2));
+      color: #14141c;
+      border-color: transparent;
+      box-shadow: 0 4px 14px rgba(255, 95, 158, 0.25);
+    }
+    .source-info {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+
     /* Modus Tabs */
     .mode-tabs {
       display: flex;
@@ -163,11 +198,39 @@
       box-shadow: 0 4px 14px rgba(255, 95, 158, 0.25);
     }
 
-    /* Volume Control */
-    .volume-control {
+    /* Top Controls (Language + Volume) */
+    .top-controls {
       position: absolute;
       top: 20px;
+      left: 20px;
       right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    .language-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .language-control select {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+      background-size: 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 28px;
+    }
+    /* Volume Control */
+    .volume-control {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -175,7 +238,6 @@
       border: 1px solid var(--border);
       border-radius: 24px;
       padding: 6px 12px 6px 10px;
-      z-index: 100;
     }
     .volume-icon {
       font-size: 16px;
@@ -218,9 +280,16 @@
       cursor: pointer;
     }
     @media (max-width: 480px) {
-      .volume-control {
+      .top-controls {
         top: 12px;
+        left: 12px;
         right: 12px;
+      }
+      .language-control select {
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+      .volume-control {
         padding: 4px 8px 4px 6px;
       }
       .volume-icon { font-size: 14px; }
@@ -565,23 +634,47 @@
   </style>
 </head>
 <body>
-  <main class="app">
+    <main class="app">
     <h1>🎲 AniList Waifu Roulette</h1>
-    <p class="subtitle">Gib deinen AniList-Nutzernamen ein und würfle zufällige weibliche Charaktere aus deiner Anime-Liste.</p>
+    <p class="subtitle">Gib deinen AniList-Nutzernamen ein und würfle zufällige weibliche Charaktere aus deiner Anime- Liste.</p>
+
+    <div class="source-selector">
+      <button class="source-option active" onclick="setSource('anilist')" data-source="anilist">AniList (offiziell)</button>
+      <button class="source-option" onclick="setSource('danbooru')" data-source="danbooru">danbooru</button>
+      <button class="source-option" onclick="setSource('safebooru')" data-source="safebooru">safebooru</button>
+    </div>
+    <div class="source-info" id="sourceInfo">Lädt Daten von AniList API</div>
 
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="roll" id="tabRoll">Roll-Modus</button>
       <button class="mode-tab" data-mode="tier" id="tabTier">Tier-List-Modus</button>
       <button class="mode-tab" data-mode="smash" id="tabSmash">Smash or Pass</button>
     </div>
-    <div class="volume-control" id="volumeControl">
-      <span class="volume-icon" id="volumeIcon">🔊</span>
-      <input type="range" id="volumeSlider" min="0" max="100" value="43" aria-label="Lautstärke">
+    <div class="top-controls">
+      <div class="language-control">
+        <select id="language">
+          <option value="de" selected>Deutsch</option>
+          <option value="en">Englisch</option>
+        </select>
+      </div>
+      <div class="volume-control" id="volumeControl">
+        <span class="volume-icon" id="volumeIcon">🔊</span>
+        <input type="range" id="volumeSlider" min="0" max="100" value="43" aria-label="Lautstärke">
+      </div>
     </div>
 
     <div class="field">
       <label for="username">AniList-Username</label>
       <input type="text" id="username" placeholder="z. B. dein_anilist_name" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="field" id="apiKeyField" style="display:none;">
+      <label for="apiKey">API Schlüssel</label>
+      <input type="password" id="apiKey" placeholder="API Schlüssel für danbooru/safebooru" autocomplete="off" spellcheck="false">
+      <small style="color:var(--muted);font-size:11px;">Für bessere Bilder von danbooru/safebooru benötigst du einen API-Schlüssel.</small>
+      <div style="margin-top: 10px; font-size: 11px; color: var(--pink); display: none;" id="apiKeyWarning">
+        ⚠️ API Schlüssel sind erforderlich für danbooru und safebooru Quellen
+      </div>
     </div>
 
     <div class="field">
@@ -590,13 +683,6 @@
         <option value="COMPLETED,CURRENT" selected>Abgeschlossen + Laufend</option>
         <option value="COMPLETED">Nur abgeschlossen</option>
         <option value="COMPLETED,CURRENT,PAUSED,REPEATING">Alles außer abgebrochen/geplant</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="language">Sprache</label>
-      <select id="language">
-        <option value="de" selected>Deutsch</option>
-        <option value="en">Englisch</option>
       </select>
     </div>
     <div class="field">
@@ -613,15 +699,15 @@
       <small style="color:var(--muted);font-size:11px;">0 = alle verfügbaren Waifus (kein Limit)</small>
     </div>
 
-    <div class="field" id="animeField" style="display:none;">
+    <div class="field" id="animeField">
       <label for="animeFilter">Anime-Filter (optional)</label>
       <input type="text" id="animeFilter" placeholder="z. B. Attack on Titan" autocomplete="off">
     </div>
 
     <button id="rollBtn">Waifu würfeln</button>
     <div id="status" aria-live="polite"></div>
-
-    <!-- Single Roll Result -->
+    
+<!-- Single Roll Result -->
     <section id="rollResult" aria-live="polite">
       <div class="single-card">
         <img id="charImg" src="" alt="">
@@ -713,6 +799,81 @@
 
   <script>
     const API_URL = "https://graphql.anilist.co";
+    const DANBOORU_API = "https://danbooru.donmai.us/posts.json";
+    const SAFEBOOORU_API = "https://safebooru.org/api/v1/posts.json";
+
+    let currentSource = "anilist";
+
+    function setSource(source) {
+      currentSource = source;
+      
+      document.querySelectorAll('.source-option').forEach(btn => {
+        if (btn.dataset.source === source) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      
+      const sourceInfo = document.getElementById('sourceInfo');
+      const apiKeyField = document.getElementById('apiKeyField');
+      
+      switch(source) {
+        case 'anilist':
+          sourceInfo.textContent = 'Lädt Daten von AniList API';
+          apiKeyField.style.display = 'none';
+          break;
+        case 'danbooru':
+          sourceInfo.textContent = 'Lädt Charakterbilder von danbooru';
+          apiKeyField.style.display = 'block';
+          break;
+        case 'safebooru':
+          sourceInfo.textContent = 'Lädt Charakterbilder von safebooru';
+          apiKeyField.style.display = 'block';
+          break;
+      }
+      
+      localStorage.removeItem(`${CACHE_KEY_PREFIX}${usernameInput.value}_${statusFilter.value}_${languageSelect.value}_${roleFilter.value}`);
+      
+      if (currentMode === 'roll' && usernameInput.value) {
+        rollSingleWaifu();
+      }
+    }
+
+    function saveApiKeys() {
+      const apiKey = document.getElementById('apiKey').value;
+      API_KEYS[currentSource] = apiKey;
+      localStorage.setItem(`${currentSource}ApiKey`, apiKey);
+      
+      setStatus('API Schlüssel gespeichert');
+      playSound('success');
+    }
+
+    function loadApiKeys() {
+      const savedDanbooruKey = localStorage.getItem('danbooruApiKey');
+      const savedSafeBooruKey = localStorage.getItem('safebooruApiKey');
+      
+      if (savedDanbooruKey) {
+        API_KEYS.danbooru = savedDanbooruKey;
+      }
+      if (savedSafeBooruKey) {
+        API_KEYS.safebooru = savedSafeBooruKey;
+      }
+      
+      const apiKeyInput = document.getElementById('apiKey');
+      if (currentSource === 'danbooru' && savedDanbooruKey) {
+        apiKeyInput.value = savedDanbooruKey;
+      } else if (currentSource === 'safebooru' && savedSafeBooruKey) {
+        apiKeyInput.value = savedSafeBooruKey;
+      }
+    }
+
+    // API Keys - you'll need to provide these for production use
+    const API_KEYS = {
+      danbooru: null, // Replace with your danbooru API key
+      safebooru: null, // Replace with your safebooru API key
+    };
+
     const QUERY = `
       query ($name: String, $statuses: [MediaListStatus]) {
         MediaListCollection(userName: $name, type: ANIME, status_in: $statuses) {
@@ -721,14 +882,6 @@
               media {
                 title { romaji english }
                 characters(perPage: 25, sort: ROLE) {
-                  nodes {
-                    id
-                    name { full native }
-                    image { large }
-                    gender
-                  }
-                }
-                mainCharacters(perPage: 25) {
                   nodes {
                     id
                     name { full native }
@@ -834,6 +987,9 @@
       if (savedLanguage) languageSelect.value = savedLanguage;
     } catch (error) {}
 
+    // Gespeicherte API-Schlüssel laden
+    try { loadApiKeys(); } catch (error) {}
+
     // Gespeicherten Rollen-Filter laden
     try {
       const savedRoleFilter = localStorage.getItem("roleFilter");
@@ -892,6 +1048,16 @@
     }
     updateVolumeIcon();
 
+    // API-Schlüssel-Input: Enter speichert
+    const apiKeyInput = document.getElementById("apiKey");
+    apiKeyInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveApiKeys();
+    });
+    apiKeyInput.addEventListener("change", saveApiKeys);
+
+    // Gespeicherte API-Schlüssel laden
+    try { loadApiKeys(); } catch (error) {}
+
     // Mittelklick auf Single-Card: Charakter auf AniList öffnen
     let currentPickId = null;
     singleCard.addEventListener("click", (e) => {
@@ -917,6 +1083,7 @@
       const role = roleFilter.value;
       try { localStorage.setItem("roleFilter", role); } catch (error) {}
 
+      const animeFilter = animeFilterInput.value.trim().toLowerCase();
       const statuses = statusFilter.value.split(",");
       const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
@@ -928,6 +1095,12 @@
         if (!characters) {
           characters = await fetchCharacters(username, statuses, lang, role);
           await setCached(cacheKey, characters);
+        }
+        if (animeFilter) {
+          characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
+          if (characters.length === 0) {
+            throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+          }
         }
         const pick = characters[Math.floor(Math.random() * characters.length)];
         currentPickId = pick.id;
@@ -1066,6 +1239,7 @@
     }
 
     async function fetchCharacters(username, statuses, lang = "de", role = "MAIN") {
+      // Fetch character metadata from AniList
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -1076,7 +1250,105 @@
       if (json.errors) throw new Error(json.errors[0]?.message || "Unbekannter AniList-Fehler");
       const characters = extractCharacters(json.data?.MediaListCollection?.lists || [], lang, role);
       if (characters.length === 0) throw new Error("Keine weiblichen Charaktere gefunden. Ist deine Liste öffentlich und enthält Anime?");
+      
+      // If danbooru or safebooru is selected, replace images
+      if (currentSource === 'danbooru' || currentSource === 'safebooru') {
+        return await replaceImagesWithDanbooruSafeBooru(characters);
+      }
+      
       return characters;
+    }
+
+    async function replaceImagesWithDanbooruSafeBooru(characters) {
+      const results = [];
+      for (const char of characters) {
+        try {
+          const image = await fetchDanbooruSafeBooruImage(char.name, char.anime);
+          if (image) {
+            results.push({
+              ...char,
+              image: image
+            });
+          } else {
+            // Fallback to AniList image if no danbooru/safebooru image found
+            results.push(char);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch image for ${char.name}:`, error);
+          // Fallback to AniList image
+          results.push(char);
+        }
+      }
+      return results;
+    }
+
+    async function fetchDanbooruSafeBooruImage(characterName, animeTitle) {
+      // Check if API key is provided
+      if (!API_KEYS[currentSource]) {
+        setStatus(`Bitte gib einen ${currentSource} API-Schlüssel ein.`);
+        playSound("error");
+        return null;
+      }
+      
+      const searchQuery = `${characterName} ${animeTitle}`;
+      const encodedQuery = encodeURIComponent(searchQuery);
+      
+      const apiEndpoint = currentSource === 'danbooru' 
+        ? `https://danbooru.donmai.us/posts.json?search=${encodedQuery}&limit=1`
+        : `https://safebooru.org/api/v1/posts.json?search=${encodedQuery}&limit=1`;
+      
+      // CORS proxies to try
+      const corsProxies = [
+        'https://corsproxy.io/?url=',
+        'https://api.codetabs.com/v1/?url=',
+        'https://api.allorigins.win/raw?url=',
+        'https://cors-anywhere.herokuapp.com/'
+      ];
+      
+      for (const proxy of corsProxies) {
+        try {
+          const proxyUrl = proxy + encodeURIComponent(apiEndpoint);
+          
+          const headers = {
+            'Accept': 'application/json'
+          };
+          
+          // Add API key (required for danbooru/safebooru)
+          headers['Api-Key'] = encodeURIComponent(API_KEYS[currentSource]);
+          
+          const response = await fetch(proxyUrl, { headers });
+          
+          if (!response.ok) {
+            console.warn(`${currentSource} API via proxy returned status ${response.status}`);
+            if (response.status === 401) {
+              setStatus(`Ungültiger ${currentSource} API-Schlüssel.`);
+              playSound("error");
+              return null;
+            }
+            continue;
+          }
+          
+          const data = await response.json();
+          
+          if (data && data.length > 0 && data[0].file_url) {
+            // danbooru/safebooru image URL
+            const imageUrl = data[0].file_url;
+            
+            // Check if it's a valid image URL
+            if (imageUrl && (imageUrl.startsWith('http') || imageUrl.startsWith('//'))) {
+              return imageUrl.startsWith('//') ? 'https:' + imageUrl : imageUrl;
+            }
+          }
+          
+          return null;
+        } catch (error) {
+          console.warn(`Error fetching image from ${currentSource} via proxy:`, error);
+          continue;
+        }
+      }
+      
+      console.warn(`All CORS proxies failed for ${currentSource}`);
+      return null;
     }
 
     function extractCharacters(lists, lang = "de", role = "MAIN") {
@@ -1087,11 +1359,12 @@
           const title = lang === "en"
             ? (media.title.english || media.title.romaji)
             : media.title.romaji;
-          const nodes = role === "MAIN"
-            ? (media.mainCharacters?.nodes || [])
-            : (media.characters?.nodes || []);
-          for (const character of nodes) {
+          for (const character of media.characters.nodes) {
             if (character.gender !== "Female") continue;
+            // role="MAIN" filtert Hauptcharaktere (nur solche mit role=MAIN)
+            // Da die API keine Rollen-Filterung über Variablen unterstützt,
+            // filtern wir clientseitig nach dem characters.sort=ROLE-Attribut
+            if (role === "MAIN" && character.role !== "MAIN") continue;
             if (!seen.has(character.id) && character.image?.large) {
               seen.set(character.id, {
                 id: character.id,
