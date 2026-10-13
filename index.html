@@ -895,6 +895,8 @@
     const singleCard = document.querySelector(".single-card");
 
     let currentMode = "roll";
+    // Prevent overlapping calls when a button or Enter handler is triggered twice.
+    let rollActionInProgress = false;
     let currentCharacters = [];
     let currentPool = [];
     let tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
@@ -1029,6 +1031,8 @@
         usernameInput.focus();
         return;
       }
+      if (rollActionInProgress) return;
+      rollActionInProgress = true;
       try { localStorage.setItem("anilistUsername", username); } catch (error) {}
 
       const lang = languageSelect.value;
@@ -1071,6 +1075,7 @@
         playSound("error");
       } finally {
         rollBtn.disabled = false;
+        rollActionInProgress = false;
       }
     }
 
@@ -1081,6 +1086,8 @@
         usernameInput.focus();
         return;
       }
+      if (rollActionInProgress) return;
+      rollActionInProgress = true;
       try { localStorage.setItem("anilistUsername", username); } catch (error) {}
 
       const lang = languageSelect.value;
@@ -1125,6 +1132,7 @@
         playSound("error");
       } finally {
         rollBtn.disabled = false;
+        rollActionInProgress = false;
       }
     }
 
@@ -1218,8 +1226,8 @@
     // Edit these arrays to customize the search terms for each Danbooru preset.
     // Examples: ["rating:g"], ["rating:g", "solo"], ["-rating:e"]
     const DANBOORU_PRESETS = {
-      danbooru:  { searchTerms: ["solo_focus", "rating:safe"] },
-      danbooru2: { searchTerms: ["solo_focus", "cowboy_shot"] }
+      danbooru:  { searchTerms: ["solo"] },
+      danbooru2: { searchTerms: ["solo", "cowboy_shot"] }
     };
     const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)(\?|$)/i;
     const booruCache = new Map(); // "quelle|charId" -> Bild-URL oder null
@@ -1259,60 +1267,118 @@
       return [...new Set(v)];
     }
 
-    // Ambiguous names (rem_(re:zero) vs. rem_(fate)): Match parentheses against the anime title, then compare post counts
-    function pickBestTag(cands, variants, animeText) {
-      const toks = (animeText.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []);
-      const better = (a, b) => { for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
-      let best = null;
+    // Rank matching character tags by how well their qualifier matches the anime title.
+    function rankBooruTags(cands, variants, animeText) {
+      const animeTokens = (animeText || "").toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [];
+      const ranked = [];
       for (const c of cands) {
-        if (!c.name) continue;
-        const vi = variants.findIndex(v => c.name === v || c.name.startsWith(v + "_("));
-        if (vi === -1) continue;
-        const paren = c.name.includes("_(") ? c.name.slice(c.name.indexOf("_(")) : "";
-        const key = [toks.filter(t => paren.includes(t)).length, -vi, c.count || 0];
-        if (!best || better(key, best.key)) best = { name: c.name, key };
+        if (!c || !c.name) continue;
+        const vi = variants.findIndex(v => c.name === v || c.name.startsWith(v + "_"));
+        if (vi < 0) continue;
+        const qualifier = c.name.slice(variants[vi].length).toLowerCase();
+        const animeHits = animeTokens.filter(token => qualifier.includes(token)).length;
+        const exact = c.name === variants[vi] ? 1 : 0;
+        ranked.push({ name: c.name, score: [animeHits, exact, -vi, c.count || 0] });
       }
-      return best ? best.name : null;
+      ranked.sort((a, b) => {
+        for (let i = 0; i < a.score.length; i++) {
+          if (a.score[i] !== b.score[i]) return b.score[i] - a.score[i];
+        }
+        return a.name.localeCompare(b.name);
+      });
+      return [...new Set(ranked.map(item => item.name))];
+    }
+
+    async function findBooruCharacterTags(variants, animeText, auth) {
+      const results = [];
+      const seen = new Set();
+      for (const variant of variants) {
+        let gotForVariant = false;
+        for (const pattern of [variant + "_(*", variant, variant + "*"]) {
+          const qs = new URLSearchParams({
+            "search[name_matches]": pattern,
+            "search[category]": "4",
+            "search[order]": "count",
+            limit: "30",
+            ...auth
+          });
+          let rows;
+          try {
+            rows = await booruJson("https://danbooru.donmai.us/tags.json?" + qs);
+          } catch (error) {
+            if (String(error?.message || error).includes("HTTP 422")) continue;
+            throw error;
+          }
+          const ranked = rankBooruTags(
+            (Array.isArray(rows) ? rows : []).map(t => ({ name: t.name, count: t.post_count })),
+            variants,
+            animeText
+          );
+          if (ranked.length) {
+            for (const name of ranked) {
+              if (!seen.has(name)) { seen.add(name); results.push(name); }
+            }
+            gotForVariant = true;
+            break;
+          }
+        }
+        // Usually the primary name is enough; only keep trying alternative orderings if not found.
+        if (gotForVariant) break;
+      }
+      return results.slice(0, 8);
     }
 
     async function danbooruImage(variants, animeText, source = "danbooru") {
       const preset = DANBOORU_PRESETS[source] || DANBOORU_PRESETS.danbooru;
       const apiKey = API_KEYS[source] || API_KEYS.danbooru;
       const auth = (API_KEYS.username && apiKey) ? { login: API_KEYS.username, api_key: apiKey } : {};
-      let tag = null;
-      for (const v of variants) {
-        for (const pattern of [v + "_(*", v]) {
-          const qs = new URLSearchParams({ "search[name_matches]": pattern, "search[category]": "4", "search[order]": "count", limit: "20", ...auth });
-          const tags = await booruJson("https://danbooru.donmai.us/tags.json?" + qs);
-          tag = pickBestTag((Array.isArray(tags) ? tags : []).map(t => ({ name: t.name, count: t.post_count })), variants, animeText);
-          if (tag) break;
-        }
-        if (tag) break;
-      }
-      if (!tag) return null;
 
-      // Always limit results to safe-rated posts. Any rating supplied in a preset is ignored,
-      // so custom tags cannot accidentally broaden the search to other ratings.
+      let tagCandidates = await findBooruCharacterTags(variants, animeText, auth);
+      // If the tag index misses an alias, try the normalized AniList names directly as tags.
+      if (!tagCandidates.length) tagCandidates = variants.slice();
+
+      // The preset controls style/pose tags only. The safe-rating tag is always enforced.
       const customTerms = (preset.searchTerms || [])
         .map(term => String(term).trim().replace(/\s+/g, " "))
         .filter(term => term && !/^rating:/i.test(term) && !/^random(?::|$)/i.test(term) && !/^order:/i.test(term));
 
-      // Some accounts have a search-tag limit. If Danbooru rejects the query with HTTP 422,
-      // retry while dropping optional custom terms; keep the character and safe-rating filter.
-      let posts = [];
-      for (let keep = customTerms.length; keep >= 0; keep--) {
-        const searchTags = [tag, ...customTerms.slice(0, keep), "rating:s"].join(" ");
-        const qs = new URLSearchParams({ tags: searchTags, limit: "10", random: "true", ...auth });
-        try {
-          posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
-          break;
-        } catch (error) {
-          if (!String(error?.message || error).includes("HTTP 422") || keep === 0) throw error;
-          console.warn(`[${source}] Danbooru rejected the tag count; retrying with fewer custom search terms.`);
+      // Try full custom terms first, then relaxed combinations when they have no results
+      // or the API rejects the tag count (HTTP 422).
+      const termSets = [];
+      const addTermSet = terms => {
+        const key = terms.join(" ");
+        if (!termSets.some(old => old.join(" ") === key)) termSets.push(terms);
+      };
+      addTermSet(customTerms);
+      for (let i = customTerms.length - 1; i >= 0; i--) {
+        addTermSet(customTerms.filter((_, index) => index !== i));
+      }
+      for (let n = customTerms.length - 1; n >= 0; n--) addTermSet(customTerms.slice(0, n));
+      addTermSet([]);
+
+      for (const tag of tagCandidates) {
+        for (const terms of termSets) {
+          // rating:safe is the documented safe-rating alias and is accepted for public searches.
+          const searchTags = [tag, ...terms, "rating:safe"].join(" ");
+          const qs = new URLSearchParams({ tags: searchTags, limit: "20", random: "true", ...auth });
+          let posts;
+          try {
+            posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
+          } catch (error) {
+            if (String(error?.message || error).includes("HTTP 422")) {
+              console.info(`[${source}] retrying with fewer Danbooru tags for ${tag}`);
+              continue;
+            }
+            throw error;
+          }
+          const urls = (Array.isArray(posts) ? posts : [])
+            .map(post => absUrl(post.large_file_url || post.sample_file_url || post.file_url || post.preview_file_url))
+            .filter(url => url && IMAGE_EXT.test(url));
+          if (urls.length) return urls[Math.floor(Math.random() * urls.length)];
+          // An empty result is not cached; keep trying with fewer terms or a different candidate tag.
         }
       }
-      const urls = (Array.isArray(posts) ? posts : []).map(p => absUrl(p.large_file_url || p.file_url)).filter(u => u && IMAGE_EXT.test(u));
-      return urls[0] || null;
+      return null;
     }
 
     async function fetchBooruImage(source, char) {
@@ -1322,30 +1388,56 @@
       return danbooruImage(variants, animeText, source);
     }
 
-    // Ersetzt char.image direkt im Objekt; bei Fehlern bleibt das AniList-Bild
+    const booruInFlight = new Map();
+    async function getBooruImageForCharacter(source, character) {
+      if (source !== "danbooru" && source !== "danbooru2") return null;
+      const key = `${source}|${character.id}`;
+      const cachedUrl = booruCache.get(key);
+      if (cachedUrl) {
+        character.image = cachedUrl;
+        return cachedUrl;
+      }
+      if (booruInFlight.has(key)) return booruInFlight.get(key);
+
+      const request = (async () => {
+        try {
+          const url = await fetchBooruImage(source, character);
+          // Cache successful image URLs only. A no-result lookup may work on a later attempt.
+          if (url) {
+            booruCache.set(key, url);
+            character.image = url;
+          } else {
+            console.info(`[${source}] no safe image found for "${character.name}" (${character.anime}); using AniList image`);
+          }
+          return url;
+        } catch (error) {
+          console.warn(`[${source}] image lookup failed for "${character.name}":`, error);
+          return null;
+        } finally {
+          booruInFlight.delete(key);
+        }
+      })();
+      booruInFlight.set(key, request);
+      return request;
+    }
+
+    // Replace char.image in place; if no safe Danbooru result exists, retain the AniList image.
     async function applyBooruImages(chars, quiet = false) {
-      if (currentSource !== "danbooru" && currentSource !== "danbooru2") return;
       const source = currentSource;
+      if (source !== "danbooru" && source !== "danbooru2") return;
       const todo = chars.slice();
       let done = 0, found = 0;
       const worker = async () => {
         while (todo.length) {
-          const c = todo.shift();
-          const key = `${source}|${c.id}`;
-          if (!booruCache.has(key)) {
-            let url = null;
-            try { url = await fetchBooruImage(source, c); }
-            catch (e) { console.warn(`[${source}] Bildsuche for "${c.name}" failed:`, e); }
-            booruCache.set(key, url);
-          }
-          const url = booruCache.get(key);
-          if (url) { c.image = url; found++; } else console.info(`[${source}] kein Bild for "${c.name}" (${c.anime}) – keeping AniList image`);
+          const character = todo.shift();
+          const url = await getBooruImageForCharacter(source, character);
+          if (url) found++;
           done++;
           if (!quiet) setStatus(`Loading images from ${source} … ${done}/${chars.length}`);
         }
       };
       await Promise.all([worker(), worker(), worker()]);
-      if (!quiet) console.info(`[${source}] ${found}/${chars.length} Bilder gefunden`);
+      if (!quiet) console.info(`[${source}] ${found}/${chars.length} images found`);
     }
 
     function extractCharacters(lists, lang = "de", role = "MAIN") {
@@ -2063,30 +2155,8 @@ container.appendChild(tierListClone);
       }
     }
 
-    // Re-bind mode tabs to include smash
-    document.querySelectorAll(".mode-tab").forEach(tab => {
-      tab.addEventListener("click", () => {
-        currentMode = tab.dataset.mode;
-        updateModeTabs();
-      });
-    });
-
-    // Override rollBtn click
-    rollBtn.removeEventListener("click", rollBtn.onclick);
-    rollBtn.addEventListener("click", () => {
-      if (currentMode === "roll") rollSingleCharacter();
-      else if (currentMode === "tier") rollTierList();
-      else startSmashGame();
-    });
-
-    usernameInput.removeEventListener("keydown", usernameInput.onkeydown);
-    usernameInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        if (currentMode === "roll") rollSingleCharacter();
-        else if (currentMode === "tier") rollTierList();
-        else startSmashGame();
-      }
-    });
+    // The initial mode-tab, roll-button, and Enter handlers already handle every mode.
+    // Do not bind them again here: duplicate anonymous listeners caused multiple rolls.
 
     async function startSmashGame() {
       const username = usernameInput.value.trim();
@@ -2095,6 +2165,8 @@ container.appendChild(tierListClone);
         usernameInput.focus();
         return;
       }
+      if (rollActionInProgress) return;
+      rollActionInProgress = true;
       try { localStorage.setItem("anilistUsername", username); } catch (error) {}
 
       const lang = languageSelect.value;
@@ -2136,6 +2208,7 @@ container.appendChild(tierListClone);
         setStatus(`Error: ${error.message}`);
       } finally {
         rollBtn.disabled = false;
+        rollActionInProgress = false;
       }
     }
 
@@ -2145,7 +2218,16 @@ container.appendChild(tierListClone);
         return;
       }
       const char = smashPool[smashIndex];
+      const shownIndex = smashIndex;
       smashCharImg.src = char.image;
+      if (currentSource === "danbooru" || currentSource === "danbooru2") {
+        // The remaining images load in the background. Update this card when its result arrives.
+        getBooruImageForCharacter(currentSource, char).then(url => {
+          if (url && smashIndex === shownIndex && smashPool[shownIndex] === char) {
+            smashCharImg.src = url;
+          }
+        });
+      }
       smashCharName.textContent = char.name;
       smashFromAnime.textContent = `From: ${char.anime}`;
       smashCard.classList.remove("swipe-left", "swipe-right");
