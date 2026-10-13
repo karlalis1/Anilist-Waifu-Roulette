@@ -830,8 +830,8 @@
           apiKeyField.style.display = 'none';
           break;
         case 'danbooru':
-          sourceInfo.textContent = 'Lädt Charakterbilder von danbooru (Benutzername/API-Schlüssel optional)';
-          apiKeyField.style.display = 'block';
+          sourceInfo.textContent = 'Lädt Charakterbilder von danbooru';
+          apiKeyField.style.display = 'none'; // Zugangsdaten sind fest im Code hinterlegt
           break;
         case 'safebooru':
           sourceInfo.textContent = 'Lädt Charakterbilder von safebooru (kein Schlüssel nötig)';
@@ -885,9 +885,9 @@
 
     // API Keys - you'll need to provide these for production use
     const API_KEYS = {
-      danbooru: null, // Replace with your danbooru API key
-      safebooru: null, // Replace with your safebooru API key
-      username: null, // Replace with your danbooru username
+      danbooru: "xxb3rvChgbgP6SMfZ9qZmYSU", // fest eingetragen (im Quelltext sichtbar!)
+      safebooru: null,
+      username: "karl67"
     };
 
     const QUERY = `
