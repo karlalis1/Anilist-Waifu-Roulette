@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AniList Waifu Roulette — würfle zufällige weibliche Charaktere aus deiner AniList-Anime-Liste.">
+  <meta name="description" content="AniList Waifu Roulette — roll random female characters from your AniList anime list.">
   <title>AniList Waifu Roulette</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -636,39 +636,30 @@
 <body>
     <main class="app">
     <h1>🎲 AniList Waifu Roulette</h1>
-    <p class="subtitle">Enter your AniList username and roll for random female characters from your anime list.</p>
+    <p class="subtitle">Enter your AniList username to roll random female characters from your anime list.</p>
 
     <div class="source-selector">
       <button class="source-option active" onclick="setSource('anilist')" data-source="anilist">AniList (Official)</button>
-      <button class="source-option" onclick="setSource('danbooru1')" data-source="danbooru1">Danbooru 1</button>
+      <button class="source-option" onclick="setSource('danbooru')" data-source="danbooru">Danbooru 1</button>
       <button class="source-option" onclick="setSource('danbooru2')" data-source="danbooru2">Danbooru 2</button>
     </div>
-    <div class="source-info" id="sourceInfo">Loading data from AniList API</div>
-
-    <div class="field" id="danbooru1Field" style="display:none;">
-      <label for="danbooru1SearchTerms">Danbooru 1 Search Terms</label>
-      <input type="text" id="danbooru1SearchTerms" placeholder="e.g. 1girl, solo, highres" autocomplete="off">
-    </div>
-    <div class="field" id="danbooru2Field" style="display:none;">
-      <label for="danbooru2SearchTerms">Danbooru 2 Search Terms</label>
-      <input type="text" id="danbooru2SearchTerms" placeholder="e.g. 1girl, solo, highres" autocomplete="off">
-    </div>
+    <div class="source-info" id="sourceInfo">Loads character data from the AniList API</div>
 
     <div class="mode-tabs">
-      <button class="mode-tab active" data-mode="roll" id="tabRoll">Roll-Modus</button>
-      <button class="mode-tab" data-mode="tier" id="tabTier">Tier-List-Modus</button>
+      <button class="mode-tab active" data-mode="roll" id="tabRoll">Roll Mode</button>
+      <button class="mode-tab" data-mode="tier" id="tabTier">Tier List Mode</button>
       <button class="mode-tab" data-mode="smash" id="tabSmash">Smash or Pass</button>
     </div>
     <div class="top-controls">
       <div class="language-control">
         <select id="language">
           <option value="en" selected>English</option>
-          <option value="de">Deutsch</option>
+          <option value="de">German</option>
         </select>
       </div>
       <div class="volume-control" id="volumeControl">
         <span class="volume-icon" id="volumeIcon">🔊</span>
-        <input type="range" id="volumeSlider" min="0" max="100" value="43" aria-label="Lautstärke">
+        <input type="range" id="volumeSlider" min="0" max="100" value="43" aria-label="Volume">
       </div>
     </div>
 
@@ -680,23 +671,23 @@
     <div class="field" id="apiKeyField" style="display:none;">
       <label for="apiUsername">Username</label>
       <input type="text" id="apiUsername" placeholder="your_danbooru_username" autocomplete="off" spellcheck="false">
-
+      
       <label for="apiKey" style="margin-top: 10px;">API Key</label>
       <input type="password" id="apiKey" placeholder="API Key" autocomplete="off" spellcheck="false">
-
+      
       <small style="color:var(--muted);font-size:11px; margin-top: 5px; display: block;">
         Get your API key from <a href="https://donmai.us/users" target="_blank" rel="noopener">donmai.us/users</a>
       </small>
       <div style="margin-top: 10px; font-size: 11px; color: var(--pink); display: none;" id="apiKeyWarning">
-        ⚠️ API Key and Username are required for danbooru
+        ⚠️ An API key and username are required for Danbooru
       </div>
     </div>
 
     <div class="field">
       <label for="statusFilter">Anime Status</label>
       <select id="statusFilter">
-        <option value="COMPLETED,CURRENT" selected>Completed + Currently Watching</option>
-        <option value="COMPLETED">Only Completed</option>
+        <option value="COMPLETED,CURRENT" selected>Completed + Currently Airing</option>
+        <option value="COMPLETED">Completed Only</option>
         <option value="COMPLETED,CURRENT,PAUSED,REPEATING">All except dropped/planned</option>
       </select>
     </div>
@@ -709,9 +700,9 @@
     </div>
 
     <div class="field" id="countField" style="display:none;">
-      <label for="count">Number of Waifus</label>
+      <label for="count">Number of Characters</label>
       <input type="number" id="count" min="0" max="1000" value="0">
-      <small style="color:var(--muted);font-size:11px;">0 = all available waifus (no limit)</small>
+      <small style="color:var(--muted);font-size:11px;">0 = all available characters (no limit)</small>
     </div>
 
     <div class="field" id="animeField">
@@ -719,10 +710,10 @@
       <input type="text" id="animeFilter" placeholder="e.g. Attack on Titan" autocomplete="off">
     </div>
 
-<button id="rollBtn">Roll Waifu</button>
+    <button id="rollBtn">Roll Character</button>
     <div id="status" aria-live="polite"></div>
-
-    <!-- Single Roll Result -->
+    
+<!-- Single Roll Result -->
     <section id="rollResult" aria-live="polite">
       <div class="single-card">
         <img id="charImg" src="" alt="">
@@ -742,15 +733,15 @@
     <section id="tierMode" aria-live="polite">
       <div class="tier-toolbar">
         <button id="clearTierBtn" type="button">Clear Tier List</button>
-        <button id="rerollTierBtn" type="button">Re-roll</button>
-        <button id="addMoreBtn" type="button">+ Add More Waifus</button>
+        <button id="rerollTierBtn" type="button">Reroll</button>
+        <button id="addMoreBtn" type="button">+ Add More Characters</button>
         <button id="shareTierBtn" type="button" style="display:none;">Share Tier List</button>
         <button id="exportTierBtn" type="button">Export as Image</button>
       </div>
       <div class="field" id="shareInputField" style="display:none;">
         <label for="shareLink">Share Link</label>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="shareLink" placeholder="Link to share" readonly style="flex:1;">
+          <input type="text" id="shareLink" placeholder="Share link" readonly style="flex:1;">
           <button id="copyLinkBtn">Copy</button>
         </div>
       </div>
@@ -815,7 +806,7 @@
   <script>
     const API_URL = "https://graphql.anilist.co";
     const DANBOORU_API = "https://danbooru.donmai.us/posts.json";
-    const SAFEBOOORU_API = "https://safebooru.org/api/v1/posts.json";
+    
 
     let currentSource = "anilist";
 
@@ -832,33 +823,26 @@
       
       const sourceInfo = document.getElementById('sourceInfo');
       const apiKeyField = document.getElementById('apiKeyField');
-      const danbooru1Field = document.getElementById('danbooru1Field');
-      const danbooru2Field = document.getElementById('danbooru2Field');
-      
-      danbooru1Field.style.display = 'none';
-      danbooru2Field.style.display = 'none';
       
       switch(source) {
         case 'anilist':
-          sourceInfo.textContent = 'Loading data from AniList API';
+          sourceInfo.textContent = 'Loads character data from the AniList API';
           apiKeyField.style.display = 'none';
           break;
-        case 'danbooru1':
-          sourceInfo.textContent = 'Loading character images from Danbooru 1';
+        case 'danbooru':
+          sourceInfo.textContent = 'Loads character images from Danbooru preset 1';
           apiKeyField.style.display = 'none';
-          danbooru1Field.style.display = 'block';
           break;
         case 'danbooru2':
-          sourceInfo.textContent = 'Loading character images from Danbooru 2';
+          sourceInfo.textContent = 'Loads character images from Danbooru preset 2';
           apiKeyField.style.display = 'none';
-          danbooru2Field.style.display = 'block';
           break;
       }
       
       localStorage.removeItem(`${CACHE_KEY_PREFIX}${usernameInput.value}_${statusFilter.value}_${languageSelect.value}_${roleFilter.value}`);
       
       if (currentMode === 'roll' && usernameInput.value) {
-        rollSingleWaifu();
+        rollSingleCharacter();
       }
     }
 
@@ -870,20 +854,16 @@
       localStorage.setItem(`${currentSource}ApiKey`, apiKey);
       localStorage.setItem('danbooruUsername', apiUsername);
       
-      setStatus('API Key saved');
+      setStatus('API key saved');
       playSound('success');
     }
 
     function loadApiKeys() {
       const savedDanbooruKey = localStorage.getItem('danbooruApiKey');
-      const savedSafeBooruKey = localStorage.getItem('safebooruApiKey');
       const savedDanbooruUsername = localStorage.getItem('danbooruUsername');
       
       if (savedDanbooruKey) {
         API_KEYS.danbooru = savedDanbooruKey;
-      }
-      if (savedSafeBooruKey) {
-        API_KEYS.safebooru = savedSafeBooruKey;
       }
       if (savedDanbooruUsername) {
         API_KEYS.username = savedDanbooruUsername;
@@ -894,15 +874,15 @@
       if (savedDanbooruUsername) apiUsernameInput.value = savedDanbooruUsername;
       if (currentSource === 'danbooru' && savedDanbooruKey) {
         apiKeyInput.value = savedDanbooruKey;
-      } else if (currentSource === 'safebooru' && savedSafeBooruKey) {
-        apiKeyInput.value = savedSafeBooruKey;
+      } else if (currentSource === 'danbooru2' && savedDanbooruKey) {
+        apiKeyInput.value = savedDanbooruKey;
       }
     }
 
     // API Keys - you'll need to provide these for production use
     const API_KEYS = {
       danbooru: "xxb3rvChgbgP6SMfZ9qZmYSU", // fest eingetragen (im Quelltext sichtbar!)
-      safebooru: null,
+      danbooru2: "xxb3rvChgbgP6SMfZ9qZmYSU",
       username: "karl67"
     };
 
@@ -930,7 +910,7 @@
         }
       }`;
 
-    const CACHE_KEY_PREFIX = "anilistWaifuCache_v2_";
+    const CACHE_KEY_PREFIX = "anilistCharacterCache_v2_";
     const CACHE_DURATION = 60 * 60 * 1000;
     const TIERS = ["S", "A", "B", "C", "D", "Unranked"];
     const TIER_COLORS = {
@@ -1008,24 +988,24 @@
       osc.stop(ctx.currentTime + 0.25);
     }
 
-    // Gespeicherten Nutzernamen beim Laden wiederherstellen
+    // Gespeicherten Nutzernamen beim Laden restore
     try {
       const savedUsername = localStorage.getItem("anilistUsername");
       if (savedUsername) usernameInput.value = savedUsername;
     } catch (error) {
-      // localStorage ist in einigen Browser-Kontexten nicht verfügbar
+      // localStorage is unavailable in some browser contexts
     }
 
-    // Gespeicherte Sprache laden
+    // Load saved language
     try {
       const savedLanguage = localStorage.getItem("language");
-      if (savedLanguage) languageSelect.value = savedLanguage;
+      languageSelect.value = "en";
     } catch (error) {}
 
-    // Gespeicherte API-Schlüssel laden
+    // Load saved API keys
     try { loadApiKeys(); } catch (error) {}
 
-    // Gespeicherten Rollen-Filter laden
+    // Load saved role filter
     try {
       const savedRoleFilter = localStorage.getItem("roleFilter");
       if (savedRoleFilter) roleFilter.value = savedRoleFilter;
@@ -1042,14 +1022,14 @@
 
     rollBtn.addEventListener("click", () => {
       playSound("click");
-      if (currentMode === "roll") rollSingleWaifu();
+      if (currentMode === "roll") rollSingleCharacter();
       else if (currentMode === "tier") rollTierList();
       else startSmashGame();
     });
     usernameInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         playSound("click");
-        if (currentMode === "roll") rollSingleWaifu();
+        if (currentMode === "roll") rollSingleCharacter();
         else if (currentMode === "tier") rollTierList();
         else startSmashGame();
       }
@@ -1065,7 +1045,7 @@
     });
     document.getElementById("addMoreBtn").addEventListener("click", () => {
       playSound("pop");
-      addMoreWaifus();
+      addMoreCharacters();
     });
 
     // Volume slider
@@ -1083,7 +1063,7 @@
     }
     updateVolumeIcon();
 
-    // API-Schlüssel-Input: Enter speichert
+    // API key input: Enter saves
     const apiKeyInput = document.getElementById("apiKey");
     apiKeyInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") saveApiKeys();
@@ -1091,10 +1071,10 @@
     apiKeyInput.addEventListener("change", saveApiKeys);
     document.getElementById("apiUsername").addEventListener("change", saveApiKeys);
 
-    // Gespeicherte API-Schlüssel laden
+    // Load saved API keys
     try { loadApiKeys(); } catch (error) {}
 
-    // Mittelklick auf Single-Card: Charakter auf AniList öffnen
+    // Middle-click a single card to open the character on AniList
     let currentPickId = null;
     singleCard.addEventListener("click", (e) => {
       if (e.button !== 1) return; // Nur Mittelmaus
@@ -1103,10 +1083,10 @@
       }
     });
 
-    async function rollSingleWaifu() {
+    async function rollSingleCharacter() {
       const username = usernameInput.value.trim();
       if (!username) {
-        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        setStatus("Please enter your AniList username first.");
         playSound("error");
         usernameInput.focus();
         return;
@@ -1124,7 +1104,7 @@
       const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
       rollResult.style.display = "none";
-      setStatus("Scanne AniList-Liste …");
+      setStatus("Scanning AniList list…");
 
       try {
         let characters = await getCached(cacheKey);
@@ -1135,7 +1115,7 @@
         if (animeFilter) {
           characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
           if (characters.length === 0) {
-            throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+            throw new Error(`No female characters found in anime "${animeFilterInput.value}" gefunden.`);
           }
         }
         const pick = characters[Math.floor(Math.random() * characters.length)];
@@ -1143,13 +1123,13 @@
         currentPickId = pick.id;
         charImg.src = pick.image;
         charName.textContent = pick.name;
-        fromAnime.textContent = `aus: ${pick.anime}`;
-        poolSize.textContent = `${characters.length} Charaktere im Pool`;
+        fromAnime.textContent = `From: ${pick.anime}`;
+        poolSize.textContent = `${characters.length} characters in the pool`;
         rollResult.style.display = "block";
-        setStatus(`${characters.length} Charaktere im Pool · Cache 1h`);
+        setStatus(`${characters.length} characters in the pool · Cache 1h`);
         playSound("success");
       } catch (error) {
-        setStatus(`Fehler: ${error.message}`);
+        setStatus(`Error: ${error.message}`);
         playSound("error");
       } finally {
         rollBtn.disabled = false;
@@ -1159,7 +1139,7 @@
     async function rollTierList() {
       const username = usernameInput.value.trim();
       if (!username) {
-        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        setStatus("Please enter your AniList username first.");
         usernameInput.focus();
         return;
       }
@@ -1176,7 +1156,7 @@
       const statuses = statusFilter.value.split(",");
       const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
-      setStatus("Scanne AniList-Liste …");
+      setStatus("Scanning AniList list…");
 
       try {
         let characters = await getCached(cacheKey);
@@ -1187,33 +1167,33 @@
         if (animeFilter) {
           characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
           if (characters.length === 0) {
-            throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+            throw new Error(`No female characters found in anime "${animeFilterInput.value}" gefunden.`);
           }
         }
         const shuffled = characters.slice().sort(() => 0.5 - Math.random());
         const picked = shuffled.slice(0, desiredCount);
         if (picked.length === 0) {
-          throw new Error("Nicht genug Charaktere für die gewünschte Anzahl.");
+          throw new Error("Not enough characters for the requested amount.");
         }
         await applyBooruImages(picked);
         currentCharacters = picked;
         currentPool = picked;
         tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: picked };
         renderTierList();
-        setStatus(`${characters.length} Charaktere im Pool · ${picked.length} Waifus gewürfelt · Cache 1h`);
+        setStatus(`${characters.length} characters in the pool · ${picked.length} characters rolled · Cache 1h`);
         playSound("success");
       } catch (error) {
-        setStatus(`Fehler: ${error.message}`);
+        setStatus(`Error: ${error.message}`);
         playSound("error");
       } finally {
         rollBtn.disabled = false;
       }
     }
 
-    async function addMoreWaifus() {
+    async function addMoreCharacters() {
       const username = usernameInput.value.trim();
       if (!username) {
-        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        setStatus("Please enter your AniList username first.");
         playSound("error");
         usernameInput.focus();
         return;
@@ -1226,7 +1206,7 @@
       const statuses = statusFilter.value.split(",");
       const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
-      setStatus("Würfle weitere Waifus …");
+      setStatus("Rolling more characters…");
 
       try {
         let characters = await getCached(cacheKey);
@@ -1237,7 +1217,7 @@
         if (animeFilter) {
           characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
           if (characters.length === 0) {
-            throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+            throw new Error(`No female characters found in anime "${animeFilterInput.value}" gefunden.`);
           }
         }
 
@@ -1246,7 +1226,7 @@
         const available = characters.filter(c => !existingIds.has(c.id));
         
         if (available.length === 0) {
-          setStatus("Keine neuen Waifus verfügbar (alle bereits in der Liste).");
+          setStatus("No new characters available (they are all already in the list).");
           playSound("error");
           rollBtn.disabled = false;
           return;
@@ -1256,7 +1236,7 @@
         const picked = shuffled.slice(0, desiredCount);
         
         if (picked.length === 0) {
-          setStatus("Keine neuen Waifus verfügbar.");
+          setStatus("No new characters available.");
           playSound("error");
           rollBtn.disabled = false;
           return;
@@ -1267,10 +1247,10 @@
         tierState.Unranked = [...tierState.Unranked, ...picked];
         currentCharacters = [...currentCharacters, ...picked];
         renderTierList();
-        setStatus(`${picked.length} neue Waifus hinzugefügt · ${characters.length} im Pool · Cache 1h`);
+        setStatus(`${picked.length} new characters added · ${characters.length} im Pool · Cache 1h`);
         playSound("pop");
       } catch (error) {
-        setStatus(`Fehler: ${error.message}`);
+        setStatus(`Error: ${error.message}`);
         playSound("error");
       } finally {
         rollBtn.disabled = false;
@@ -1286,17 +1266,23 @@
       });
       if (!response.ok) throw new Error(`AniList antwortete mit Status ${response.status}`);
       const json = await response.json();
-      if (json.errors) throw new Error(json.errors[0]?.message || "Unbekannter AniList-Fehler");
+      if (json.errors) throw new Error(json.errors[0]?.message || "Unknown AniList error");
       const characters = extractCharacters(json.data?.MediaListCollection?.lists || [], lang, role);
-      if (characters.length === 0) throw new Error("Keine weiblichen Charaktere gefunden. Ist deine Liste öffentlich und enthält Anime?");
+      if (characters.length === 0) throw new Error("No female characters found. Is your list public and does it contain anime?");
       
       return characters;
     }
 
     // ===== Booru-Bilder (Danbooru / Safebooru) =====
-    // Nur für die tatsächlich gewürfelten Charaktere, nicht für den ganzen Pool.
-    // SFW-Filter für Danbooru: "rating:g" eintragen, leer = alle Ratings
+    // Nur for die tatsächlich gewürfelten Charaktere, nicht for den ganzen Pool.
+    // SFW-Filter for Danbooru: "rating:g" eintragen, leer = alle Ratings
     const DANBOORU_RATING = "";
+    // Edit these arrays to customize the search terms for each Danbooru preset.
+    // Examples: ["rating:g"], ["rating:g", "solo"], ["-rating:e"]
+    const DANBOORU_PRESETS = {
+      danbooru:  { searchTerms: [] },
+      danbooru2: { searchTerms: [] }
+    };
     const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)(\?|$)/i;
     const booruCache = new Map(); // "quelle|charId" -> Bild-URL oder null
 
@@ -1308,7 +1294,7 @@
       for (const u of attempts) {
         try {
           const r = await fetch(u);
-          if (!r.ok) { lastErr = new Error("HTTP " + r.status + " für " + u); continue; }
+          if (!r.ok) { lastErr = new Error("HTTP " + r.status + " for " + u); continue; }
           const text = (await r.text()).trim();
           return text ? JSON.parse(text) : [];
         } catch (e) { lastErr = e; }
@@ -1328,7 +1314,7 @@
       return [...new Set(v)];
     }
 
-    // Mehrdeutige Namen (rem_(re:zero) vs. rem_(fate)): Überlappung der Klammer mit dem Anime-Titel, dann Post-Anzahl
+    // Ambiguous names (rem_(re:zero) vs. rem_(fate)): Match parentheses against the anime title, then compare post counts
     function pickBestTag(cands, variants, animeText) {
       const toks = (animeText.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []);
       const better = (a, b) => { for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
@@ -1344,9 +1330,10 @@
       return best ? best.name : null;
     }
 
-    async function danbooruImage(variants, animeText, searchTerms = "") {
-      const auth = (API_KEYS.username && API_KEYS.danbooru) ? { login: API_KEYS.username, api_key: API_KEYS.danbooru } : {};
-      const customTerms = searchTerms.split(",").map(t => t.trim()).filter(Boolean);
+    async function danbooruImage(variants, animeText, source = "danbooru") {
+      const preset = DANBOORU_PRESETS[source] || DANBOORU_PRESETS.danbooru;
+      const apiKey = API_KEYS[source] || API_KEYS.danbooru;
+      const auth = (API_KEYS.username && apiKey) ? { login: API_KEYS.username, api_key: apiKey } : {};
       let tag = null;
       for (const v of variants) {
         for (const pattern of [v + "_(*", v]) {
@@ -1358,52 +1345,23 @@
         if (tag) break;
       }
       if (!tag) return null;
-      const allTags = [tag, DANBOORU_RATING, ...customTerms].filter(Boolean).join(" ");
-      const qs = new URLSearchParams({ tags: allTags, limit: "10", random: "true", ...auth });
+      const qs = new URLSearchParams({ tags: [tag, DANBOORU_RATING, ...(preset.searchTerms || [])].filter(Boolean).join(" "), limit: "10", random: "true", ...auth });
       const posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
       const urls = (Array.isArray(posts) ? posts : []).map(p => absUrl(p.large_file_url || p.file_url)).filter(u => u && IMAGE_EXT.test(u));
       return urls[0] || null;
     }
 
-    async function safebooruImage(variants, animeText) {
-      let tag = null;
-      for (const v of variants) {
-        for (const pattern of [v + "_(", v]) {
-          const list = await booruJson("https://safebooru.org/autocomplete.php?q=" + encodeURIComponent(pattern), { proxy: true });
-          const cands = (Array.isArray(list) ? list : []).map(i => ({
-            name: i.value,
-            count: parseInt((String(i.label || "").match(/\((\d+)\)\s*$/) || [])[1] || "0", 10),
-          }));
-          tag = pickBestTag(cands, variants, animeText);
-          if (tag) break;
-        }
-        if (tag) break;
-      }
-      if (!tag) return null;
-      const qs = new URLSearchParams({ page: "dapi", s: "post", q: "index", json: "1", limit: "50", tags: tag });
-      const data = await booruJson("https://safebooru.org/index.php?" + qs, { proxy: true });
-      const posts = Array.isArray(data) ? data : (data && data.post) || [];
-      const urls = posts
-        .map(p => absUrl(p.file_url) || (p.directory && p.image ? `https://safebooru.org/images/${p.directory}/${p.image}` : null))
-        .filter(u => u && IMAGE_EXT.test(u));
-      return urls.length ? urls[Math.floor(Math.random() * urls.length)] : null;
-    }
-
-    async function fetchBooruImage(source, char, searchTerms = "") {
+    async function fetchBooruImage(source, char) {
       const variants = booruNameVariants(char.name);
       if (!variants.length) return null;
       const animeText = char.animeAll || char.anime || "";
-      return source === "danbooru1" ? danbooruImage(variants, animeText, searchTerms) : 
-             source === "danbooru2" ? danbooruImage(variants, animeText, searchTerms) : null;
+      return danbooruImage(variants, animeText, source);
     }
 
     // Ersetzt char.image direkt im Objekt; bei Fehlern bleibt das AniList-Bild
     async function applyBooruImages(chars, quiet = false) {
-      if (currentSource !== "danbooru1" && currentSource !== "danbooru2") return;
+      if (currentSource !== "danbooru" && currentSource !== "danbooru2") return;
       const source = currentSource;
-      const searchTerms = source === "danbooru1" 
-        ? document.getElementById('danbooru1SearchTerms').value 
-        : document.getElementById('danbooru2SearchTerms').value;
       const todo = chars.slice();
       let done = 0, found = 0;
       const worker = async () => {
@@ -1412,12 +1370,12 @@
           const key = `${source}|${c.id}`;
           if (!booruCache.has(key)) {
             let url = null;
-            try { url = await fetchBooruImage(source, c, searchTerms); }
-            catch (e) { console.warn(`[${source}] Bildsuche für "${c.name}" fehlgeschlagen:`, e); }
+            try { url = await fetchBooruImage(source, c); }
+            catch (e) { console.warn(`[${source}] Bildsuche for "${c.name}" failed:`, e); }
             booruCache.set(key, url);
           }
           const url = booruCache.get(key);
-          if (url) { c.image = url; found++; } else console.info(`[${source}] kein Bild für "${c.name}" (${c.anime}) – AniList-Bild bleibt`);
+          if (url) { c.image = url; found++; } else console.info(`[${source}] kein Bild for "${c.name}" (${c.anime}) – keeping AniList image`);
           done++;
           if (!quiet) setStatus(`Loading images from ${source} … ${done}/${chars.length}`);
         }
@@ -1505,7 +1463,7 @@
       chip.innerHTML = `
         <img src="${character.image}" alt="${character.name}">
         <span>${character.name}</span>
-        <span class="remove" title="Entfernen">✕</span>
+        <span class="remove" title="Remove">✕</span>
       `;
       chip.addEventListener("dragstart", handleDragStart);
       chip.addEventListener("dragend", handleDragEnd);
@@ -1567,7 +1525,7 @@
 
     function updateTierCount() {
       const total = TIERS.reduce((sum, tier) => sum + tierState[tier].length, 0);
-      tierCount.textContent = `${total} Waifus auf der Tier-List · Ziehe die Karten per Drag & Drop in die Spalten`;
+      tierCount.textContent = `${total} characters in the tier list · Drag and drop cards into the tiers`;
     }
 
     // Save to localStorage with unique key
@@ -1610,10 +1568,10 @@
       try {
         const data = JSON.parse(atob(hash));
         if (data.ids && Array.isArray(data.ids)) {
-          setStatus("Lade Tier-List von AniList …");
+          setStatus("Loading tier list from AniList…");
           const username = (data.u || usernameInput.value).trim();
           if (!username) {
-            setStatus("Fehler: Kein AniList-Username im Share-Link.");
+            setStatus("Error: Kein AniList Username im Share-Link.");
             return false;
           }
           usernameInput.value = username;
@@ -1640,12 +1598,12 @@
             tierState.Unranked = [...currentCharacters];
           }
           renderTierList();
-          setStatus("Tier-List geladen!");
+          setStatus("Tier list loaded!");
           return true;
         }
       } catch (error) {
         console.error("Import failed:", error);
-        setStatus("Fehler beim Laden der Tier-List.");
+        setStatus("Error loading tier list.");
       }
       return false;
     }
@@ -1685,17 +1643,17 @@
       setStatus("Erstelle Bild …");
       try {
         await exportTierListAsImage();
-        setStatus("Bild heruntergeladen!");
+        setStatus("Image downloaded!");
       } catch (error) {
         console.error("Export failed:", error);
-        setStatus("Fehler beim Export: " + error.message);
+        setStatus("Export failed: " + error.message);
       }
     });
 
     async function exportTierListAsImage() {
       const tierListEl = document.getElementById("tierList");
       if (!tierListEl || tierListEl.children.length === 0) {
-        throw new Error("Tier-List ist leer");
+        throw new Error("Tier List ist leer");
       }
 
       // Create container for styling and sizing reference
@@ -1715,7 +1673,7 @@
       
       // Add title
       const title = document.createElement("h1");
-      title.textContent = "AniList Waifu Tier List";
+      title.textContent = "AniList Character Tier List";
       title.style.cssText = `
         text-align: center;
         color: var(--pink-2);
@@ -1725,7 +1683,7 @@
       container.appendChild(title);
       
       const subtitle = document.createElement("p");
-      subtitle.textContent = `Erstellt für @${usernameInput.value.trim() || "User"} · ${new Date().toLocaleDateString("de-DE")}`;
+      subtitle.textContent = `Erstellt for @${usernameInput.value.trim() || "User"} · ${new Date().toLocaleDateString("en-US")}`;
       subtitle.style.cssText = `
         text-align: center;
         color: var(--muted);
@@ -1945,7 +1903,7 @@ container.appendChild(tierListClone);
 
     async function drawImageWithCORS(ctx, url, x, y, width, height) {
       // Erst direkt versuchen (Danbooru/Safebooru-CDNs senden CORS-Header),
-      // danach über Proxys (z. B. für das AniList-CDN).
+      // danach über Proxys (z. B. for das AniList-CDN).
       const proxies = [
         "https://corsproxy.io/?url=",
         "https://api.codetabs.com/v1/?url=",
@@ -1995,14 +1953,14 @@ container.appendChild(tierListClone);
     document.getElementById("importBtn").addEventListener("click", async () => {
       const input = document.getElementById("importLink");
       const url = input.value.trim();
-      if (!url) { setStatus("Bitte einen Share-Link eingeben."); return; }
+      if (!url) { setStatus("Please enter a share link."); return; }
       const hash = url.includes("#") ? url.split("#")[1] : url;
       try {
         const data = JSON.parse(atob(hash));
         if (data.ids && Array.isArray(data.ids)) {
-          setStatus("Lade Tier-List von AniList …");
+          setStatus("Loading tier list from AniList…");
           const username = (data.u || usernameInput.value).trim();
-          if (!username) { setStatus("Fehler: Kein AniList-Username im Share-Link."); return; }
+          if (!username) { setStatus("Error: Kein AniList Username im Share-Link."); return; }
           usernameInput.value = username;
           const statuses = statusFilter.value.split(",");
           const lang = languageSelect.value;
@@ -2028,19 +1986,19 @@ container.appendChild(tierListClone);
             tierState.Unranked = [...currentCharacters];
           }
           renderTierList();
-          setStatus("Tier-List importiert!");
+          setStatus("Tier List importiert!");
         } else {
-          setStatus("Ungültiger Link (altes Format?).");
+          setStatus("Invalid link (old format?).");
         }
       } catch (error) {
-        setStatus("Ungültiger Link.");
+        setStatus("Invalid link.");
       }
     });
 
     // On page load, check for shared link
     if (location.hash) {
       importFromHash().then(loaded => {
-        if (loaded) setStatus("Tier-List geladen!");
+        if (loaded) setStatus("Tier list loaded!");
       });
     }
 
@@ -2128,7 +2086,7 @@ container.appendChild(tierListClone);
       smashMode.classList.toggle("active", currentMode === "smash");
       countField.style.display = (currentMode === "tier" || currentMode === "smash") ? "block" : "none";
       animeField.style.display = currentMode === "tier" ? "block" : "none";
-      rollBtn.textContent = currentMode === "tier" ? "Waifus würfeln" : (currentMode === "smash" ? "Neues Spiel" : "Waifu würfeln");
+      rollBtn.textContent = currentMode === "tier" ? "Roll Characters" : (currentMode === "smash" ? "New Game" : "Roll Character");
       if (currentMode === "tier" && tierList.children.length === 0) renderTierList();
       if (currentMode === "smash") {
         if (smashPool.length === 0) {
@@ -2152,7 +2110,7 @@ container.appendChild(tierListClone);
     // Override rollBtn click
     rollBtn.removeEventListener("click", rollBtn.onclick);
     rollBtn.addEventListener("click", () => {
-      if (currentMode === "roll") rollSingleWaifu();
+      if (currentMode === "roll") rollSingleCharacter();
       else if (currentMode === "tier") rollTierList();
       else startSmashGame();
     });
@@ -2160,7 +2118,7 @@ container.appendChild(tierListClone);
     usernameInput.removeEventListener("keydown", usernameInput.onkeydown);
     usernameInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
-        if (currentMode === "roll") rollSingleWaifu();
+        if (currentMode === "roll") rollSingleCharacter();
         else if (currentMode === "tier") rollTierList();
         else startSmashGame();
       }
@@ -2169,7 +2127,7 @@ container.appendChild(tierListClone);
     async function startSmashGame() {
       const username = usernameInput.value.trim();
       if (!username) {
-        setStatus("Bitte zuerst deinen AniList-Username eingeben.");
+        setStatus("Please enter your AniList username first.");
         usernameInput.focus();
         return;
       }
@@ -2186,7 +2144,7 @@ container.appendChild(tierListClone);
       const statuses = statusFilter.value.split(",");
       const cacheKey = `${CACHE_KEY_PREFIX}${username}_${statusFilter.value}_${lang}_${role}`;
       rollBtn.disabled = true;
-      setStatus("Lade Waifus für Smash or Pass …");
+      setStatus("Loading characters for Smash or Pass…");
 
       try {
         let characters = await getCached(cacheKey);
@@ -2196,7 +2154,7 @@ container.appendChild(tierListClone);
         }
         if (animeFilter) {
           characters = characters.filter(c => c.anime.toLowerCase().includes(animeFilter));
-          if (characters.length === 0) throw new Error(`Keine weiblichen Charaktere im Anime "${animeFilterInput.value}" gefunden.`);
+          if (characters.length === 0) throw new Error(`No female characters found in anime "${animeFilterInput.value}" gefunden.`);
         }
         const shuffled = characters.slice().sort(() => 0.5 - Math.random());
         smashPool = desiredCount > 0 ? shuffled.slice(0, desiredCount) : shuffled; // 0 = alle
@@ -2207,11 +2165,11 @@ container.appendChild(tierListClone);
         smashCard.style.display = "block";
         smashSummary.classList.remove("open");
         revealSummaryBtn.style.display = "inline-block";
-        revealSummaryBtn.textContent = "Summary anzeigen";
+        revealSummaryBtn.textContent = "Show Summary";
         showNextSmash();
-        setStatus(`${smashPool.length} Waifus geladen · Viel Spaß!`);
+        setStatus(`${smashPool.length} characters loaded · Have fun!`);
       } catch (error) {
-        setStatus(`Fehler: ${error.message}`);
+        setStatus(`Error: ${error.message}`);
       } finally {
         rollBtn.disabled = false;
       }
@@ -2225,7 +2183,7 @@ container.appendChild(tierListClone);
       const char = smashPool[smashIndex];
       smashCharImg.src = char.image;
       smashCharName.textContent = char.name;
-      smashFromAnime.textContent = `aus: ${char.anime}`;
+      smashFromAnime.textContent = `From: ${char.anime}`;
       smashCard.classList.remove("swipe-left", "swipe-right");
       smashIndicator.classList.remove("show", "smash", "pass");
       smashIndicator.textContent = "";
@@ -2233,7 +2191,7 @@ container.appendChild(tierListClone);
       smashBtn.disabled = false;
       passBtn.disabled = false;
 
-      // Mittelklick: Charakter auf AniList öffnen
+      // Middle-click to open character on AniList
       smashCard.onclick = (e) => {
         if (e.button !== 1) return;
         window.open(`https://anilist.co/character/${char.id}`, "_blank", "noopener");
@@ -2269,8 +2227,8 @@ container.appendChild(tierListClone);
 
     function finishSmashGame() {
       smashCard.style.display = "none";
-      smashProgress.textContent = `Fertig! ${smashResults.smash.length} Smash / ${smashResults.pass.length} Pass`;
-      revealSummaryBtn.textContent = "Summary anzeigen";
+      smashProgress.textContent = `Finished! ${smashResults.smash.length} Smash / ${smashResults.pass.length} Pass`;
+      revealSummaryBtn.textContent = "Show Summary";
     }
 
     function renderSummary() {
@@ -2299,15 +2257,15 @@ container.appendChild(tierListClone);
     revealSummaryBtn.addEventListener("click", () => {
       if (!smashSummary.classList.contains("open")) {
         renderSummary();
-        revealSummaryBtn.textContent = "Summary verstecken";
+        revealSummaryBtn.textContent = "Hide summary";
       } else {
         smashSummary.classList.remove("open");
-        revealSummaryBtn.textContent = "Summary anzeigen";
+        revealSummaryBtn.textContent = "Show Summary";
       }
     });
     closeSummaryBtn.addEventListener("click", () => {
       smashSummary.classList.remove("open");
-      revealSummaryBtn.textContent = "Summary anzeigen";
+      revealSummaryBtn.textContent = "Show Summary";
     });
 
     // Keyboard support for smash or pass
