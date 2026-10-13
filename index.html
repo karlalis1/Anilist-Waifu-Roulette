@@ -679,7 +679,7 @@
         Get your API key from <a href="https://donmai.us/users" target="_blank" rel="noopener">donmai.us/users</a>
       </small>
       <div style="margin-top: 10px; font-size: 11px; color: var(--pink); display: none;" id="apiKeyWarning">
-        ⚠️ An API key and username are required for Danbooru
+        Optional: credentials are saved locally in this browser.
       </div>
     </div>
 
@@ -830,14 +830,15 @@
           apiKeyField.style.display = 'none';
           break;
         case 'danbooru':
-          sourceInfo.textContent = 'Loads character images from Danbooru preset 1';
-          apiKeyField.style.display = 'none';
+          sourceInfo.textContent = 'Loads safe-rated character images using Danbooru preset 1';
+          apiKeyField.style.display = 'block';
           break;
         case 'danbooru2':
-          sourceInfo.textContent = 'Loads character images from Danbooru preset 2';
-          apiKeyField.style.display = 'none';
+          sourceInfo.textContent = 'Loads safe-rated character images using Danbooru preset 2';
+          apiKeyField.style.display = 'block';
           break;
       }
+      loadApiKeys();
       
       localStorage.removeItem(`${CACHE_KEY_PREFIX}${usernameInput.value}_${statusFilter.value}_${languageSelect.value}_${roleFilter.value}`);
       
@@ -859,31 +860,30 @@
     }
 
     function loadApiKeys() {
-      const savedDanbooruKey = localStorage.getItem('danbooruApiKey');
-      const savedDanbooruUsername = localStorage.getItem('danbooruUsername');
-      
-      if (savedDanbooruKey) {
-        API_KEYS.danbooru = savedDanbooruKey;
-      }
-      if (savedDanbooruUsername) {
-        API_KEYS.username = savedDanbooruUsername;
-      }
-      
+      const savedDanbooruKey = localStorage.getItem('danbooruApiKey') || '';
+      const savedDanbooru2Key = localStorage.getItem('danbooru2ApiKey') || '';
+      const savedDanbooruUsername = localStorage.getItem('danbooruUsername') || '';
+
+      API_KEYS.danbooru = savedDanbooruKey;
+      API_KEYS.danbooru2 = savedDanbooru2Key || savedDanbooruKey;
+      API_KEYS.username = savedDanbooruUsername;
+
       const apiKeyInput = document.getElementById('apiKey');
       const apiUsernameInput = document.getElementById('apiUsername');
       if (savedDanbooruUsername) apiUsernameInput.value = savedDanbooruUsername;
-      if (currentSource === 'danbooru' && savedDanbooruKey) {
+      if (currentSource === 'danbooru') {
         apiKeyInput.value = savedDanbooruKey;
-      } else if (currentSource === 'danbooru2' && savedDanbooruKey) {
-        apiKeyInput.value = savedDanbooruKey;
+      } else if (currentSource === 'danbooru2') {
+        apiKeyInput.value = savedDanbooru2Key || savedDanbooruKey;
       }
     }
 
-    // API Keys - you'll need to provide these for production use
+    // API credentials are optional and are never embedded in this HTML file.
     const API_KEYS = {
-      danbooru: "xxb3rvChgbgP6SMfZ9qZmYSU", // fest eingetragen (im Quelltext sichtbar!)
-      danbooru2: "xxb3rvChgbgP6SMfZ9qZmYSU",
-      username: "karl67"
+      // Keep credentials out of the HTML source. Enter them in the settings UI.
+      danbooru: "",
+      danbooru2: "",
+      username: ""
     };
 
     const QUERY = `
@@ -1273,9 +1273,9 @@
       return characters;
     }
 
-    // ===== Booru-Bilder (Danbooru / Safebooru) =====
+    // ===== Danbooru images =====
     // Nur for die tatsächlich gewürfelten Charaktere, nicht for den ganzen Pool.
-    // SFW-Filter for Danbooru: "rating:g" eintragen, leer = alle Ratings
+    // Safe-rating filter is enforced in danbooruImage.
     const DANBOORU_RATING = "";
     // Edit these arrays to customize the search terms for each Danbooru preset.
     // Examples: ["rating:g"], ["rating:g", "solo"], ["-rating:e"]
@@ -1293,13 +1293,20 @@
       let lastErr;
       for (const u of attempts) {
         try {
-          const r = await fetch(u);
-          if (!r.ok) { lastErr = new Error("HTTP " + r.status + " for " + u); continue; }
-          const text = (await r.text()).trim();
-          return text ? JSON.parse(text) : [];
+          const r = await fetch(u, { headers: { "Accept": "application/json" } });
+          const body = (await r.text()).trim();
+          if (!r.ok) {
+            // Avoid logging the full URL because it may contain API credentials.
+            let endpoint = "request";
+            try { endpoint = new URL(u).pathname; } catch (_) {}
+            const detail = body.replace(/\s+/g, " ").slice(0, 300);
+            lastErr = new Error(`HTTP ${r.status} at ${endpoint}${detail ? ": " + detail : ""}`);
+            continue;
+          }
+          return body ? JSON.parse(body) : [];
         } catch (e) { lastErr = e; }
       }
-      throw lastErr;
+      throw lastErr || new Error("Danbooru request failed");
     }
 
     // AniList: "Vorname Nachname" -> Booru-Tags: vorname_nachname und nachname_vorname
@@ -1345,8 +1352,27 @@
         if (tag) break;
       }
       if (!tag) return null;
-      const qs = new URLSearchParams({ tags: [tag, DANBOORU_RATING, ...(preset.searchTerms || [])].filter(Boolean).join(" "), limit: "10", random: "true", ...auth });
-      const posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
+
+      // Always limit results to safe-rated posts. Any rating supplied in a preset is ignored,
+      // so custom tags cannot accidentally broaden the search to other ratings.
+      const customTerms = (preset.searchTerms || [])
+        .map(term => String(term).trim().replace(/\s+/g, " "))
+        .filter(term => term && !/^rating:/i.test(term) && !/^random(?::|$)/i.test(term) && !/^order:/i.test(term));
+
+      // Some accounts have a search-tag limit. If Danbooru rejects the query with HTTP 422,
+      // retry while dropping optional custom terms; keep the character and safe-rating filter.
+      let posts = [];
+      for (let keep = customTerms.length; keep >= 0; keep--) {
+        const searchTags = [tag, ...customTerms.slice(0, keep), "rating:s"].join(" ");
+        const qs = new URLSearchParams({ tags: searchTags, limit: "10", random: "true", ...auth });
+        try {
+          posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
+          break;
+        } catch (error) {
+          if (!String(error?.message || error).includes("HTTP 422") || keep === 0) throw error;
+          console.warn(`[${source}] Danbooru rejected the tag count; retrying with fewer custom search terms.`);
+        }
+      }
       const urls = (Array.isArray(posts) ? posts : []).map(p => absUrl(p.large_file_url || p.file_url)).filter(u => u && IMAGE_EXT.test(u));
       return urls[0] || null;
     }
