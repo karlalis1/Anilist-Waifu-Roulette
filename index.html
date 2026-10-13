@@ -669,11 +669,17 @@
     </div>
 
     <div class="field" id="apiKeyField" style="display:none;">
-      <label for="apiKey">API Schlüssel</label>
-      <input type="password" id="apiKey" placeholder="API Schlüssel für danbooru/safebooru" autocomplete="off" spellcheck="false">
-      <small style="color:var(--muted);font-size:11px;">Für bessere Bilder von danbooru/safebooru benötigst du einen API-Schlüssel.</small>
+      <label for="apiUsername">Benutzername</label>
+      <input type="text" id="apiUsername" placeholder="dein_danbooru_username" autocomplete="off" spellcheck="false">
+      
+      <label for="apiKey" style="margin-top: 10px;">API Schlüssel</label>
+      <input type="password" id="apiKey" placeholder="API Schlüssel" autocomplete="off" spellcheck="false">
+      
+      <small style="color:var(--muted);font-size:11px; margin-top: 5px; display: block;">
+        Hol dir deinen API-Schlüssel von <a href="https://donmai.us/users" target="_blank" rel="noopener">donmai.us/users</a>
+      </small>
       <div style="margin-top: 10px; font-size: 11px; color: var(--pink); display: none;" id="apiKeyWarning">
-        ⚠️ API Schlüssel sind erforderlich für danbooru und safebooru Quellen
+        ⚠️ API Schlüssel und Benutzername sind erforderlich für danbooru
       </div>
     </div>
 
@@ -824,12 +830,12 @@
           apiKeyField.style.display = 'none';
           break;
         case 'danbooru':
-          sourceInfo.textContent = 'Lädt Charakterbilder von danbooru';
+          sourceInfo.textContent = 'Lädt Charakterbilder von danbooru (Benutzername/API-Schlüssel optional)';
           apiKeyField.style.display = 'block';
           break;
         case 'safebooru':
-          sourceInfo.textContent = 'Lädt Charakterbilder von safebooru';
-          apiKeyField.style.display = 'block';
+          sourceInfo.textContent = 'Lädt Charakterbilder von safebooru (kein Schlüssel nötig)';
+          apiKeyField.style.display = 'none';
           break;
       }
       
@@ -842,8 +848,11 @@
 
     function saveApiKeys() {
       const apiKey = document.getElementById('apiKey').value;
+      const apiUsername = document.getElementById('apiUsername').value;
       API_KEYS[currentSource] = apiKey;
+      API_KEYS.username = apiUsername;
       localStorage.setItem(`${currentSource}ApiKey`, apiKey);
+      localStorage.setItem('danbooruUsername', apiUsername);
       
       setStatus('API Schlüssel gespeichert');
       playSound('success');
@@ -852,6 +861,7 @@
     function loadApiKeys() {
       const savedDanbooruKey = localStorage.getItem('danbooruApiKey');
       const savedSafeBooruKey = localStorage.getItem('safebooruApiKey');
+      const savedDanbooruUsername = localStorage.getItem('danbooruUsername');
       
       if (savedDanbooruKey) {
         API_KEYS.danbooru = savedDanbooruKey;
@@ -859,8 +869,13 @@
       if (savedSafeBooruKey) {
         API_KEYS.safebooru = savedSafeBooruKey;
       }
+      if (savedDanbooruUsername) {
+        API_KEYS.username = savedDanbooruUsername;
+      }
       
       const apiKeyInput = document.getElementById('apiKey');
+      const apiUsernameInput = document.getElementById('apiUsername');
+      if (savedDanbooruUsername) apiUsernameInput.value = savedDanbooruUsername;
       if (currentSource === 'danbooru' && savedDanbooruKey) {
         apiKeyInput.value = savedDanbooruKey;
       } else if (currentSource === 'safebooru' && savedSafeBooruKey) {
@@ -872,6 +887,7 @@
     const API_KEYS = {
       danbooru: null, // Replace with your danbooru API key
       safebooru: null, // Replace with your safebooru API key
+      username: null, // Replace with your danbooru username
     };
 
     const QUERY = `
@@ -882,11 +898,14 @@
               media {
                 title { romaji english }
                 characters(perPage: 25, sort: ROLE) {
-                  nodes {
-                    id
-                    name { full native }
-                    image { large }
-                    gender
+                  edges {
+                    role
+                    node {
+                      id
+                      name { full native }
+                      image { large }
+                      gender
+                    }
                   }
                 }
               }
@@ -895,7 +914,7 @@
         }
       }`;
 
-    const CACHE_KEY_PREFIX = "anilistWaifuCache_v1_";
+    const CACHE_KEY_PREFIX = "anilistWaifuCache_v2_";
     const CACHE_DURATION = 60 * 60 * 1000;
     const TIERS = ["S", "A", "B", "C", "D", "Unranked"];
     const TIER_COLORS = {
@@ -1054,6 +1073,7 @@
       if (event.key === "Enter") saveApiKeys();
     });
     apiKeyInput.addEventListener("change", saveApiKeys);
+    document.getElementById("apiUsername").addEventListener("change", saveApiKeys);
 
     // Gespeicherte API-Schlüssel laden
     try { loadApiKeys(); } catch (error) {}
@@ -1103,6 +1123,7 @@
           }
         }
         const pick = characters[Math.floor(Math.random() * characters.length)];
+        await applyBooruImages([pick]);
         currentPickId = pick.id;
         charImg.src = pick.image;
         charName.textContent = pick.name;
@@ -1158,6 +1179,7 @@
         if (picked.length === 0) {
           throw new Error("Nicht genug Charaktere für die gewünschte Anzahl.");
         }
+        await applyBooruImages(picked);
         currentCharacters = picked;
         currentPool = picked;
         tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: picked };
@@ -1224,6 +1246,7 @@
           return;
         }
 
+        await applyBooruImages(picked);
         // Add to Unranked and currentCharacters
         tierState.Unranked = [...tierState.Unranked, ...picked];
         currentCharacters = [...currentCharacters, ...picked];
@@ -1251,104 +1274,134 @@
       const characters = extractCharacters(json.data?.MediaListCollection?.lists || [], lang, role);
       if (characters.length === 0) throw new Error("Keine weiblichen Charaktere gefunden. Ist deine Liste öffentlich und enthält Anime?");
       
-      // If danbooru or safebooru is selected, replace images
-      if (currentSource === 'danbooru' || currentSource === 'safebooru') {
-        return await replaceImagesWithDanbooruSafeBooru(characters);
-      }
-      
       return characters;
     }
 
-    async function replaceImagesWithDanbooruSafeBooru(characters) {
-      const results = [];
-      for (const char of characters) {
+    // ===== Booru-Bilder (Danbooru / Safebooru) =====
+    // Nur für die tatsächlich gewürfelten Charaktere, nicht für den ganzen Pool.
+    // SFW-Filter für Danbooru: "rating:g" eintragen, leer = alle Ratings
+    const DANBOORU_RATING = "";
+    const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)(\?|$)/i;
+    const booruCache = new Map(); // "quelle|charId" -> Bild-URL oder null
+
+    const absUrl = (u) => (u && u.startsWith("//") ? "https:" + u : u);
+
+    async function booruJson(url, { proxy = false } = {}) {
+      const attempts = proxy ? [url, "https://corsproxy.io/?url=" + encodeURIComponent(url)] : [url];
+      let lastErr;
+      for (const u of attempts) {
         try {
-          const image = await fetchDanbooruSafeBooruImage(char.name, char.anime);
-          if (image) {
-            results.push({
-              ...char,
-              image: image
-            });
-          } else {
-            // Fallback to AniList image if no danbooru/safebooru image found
-            results.push(char);
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch image for ${char.name}:`, error);
-          // Fallback to AniList image
-          results.push(char);
-        }
+          const r = await fetch(u);
+          if (!r.ok) { lastErr = new Error("HTTP " + r.status + " für " + u); continue; }
+          const text = (await r.text()).trim();
+          return text ? JSON.parse(text) : [];
+        } catch (e) { lastErr = e; }
       }
-      return results;
+      throw lastErr;
     }
 
-    async function fetchDanbooruSafeBooruImage(characterName, animeTitle) {
-      // Check if API key is provided
-      if (!API_KEYS[currentSource]) {
-        setStatus(`Bitte gib einen ${currentSource} API-Schlüssel ein.`);
-        playSound("error");
-        return null;
+    // AniList: "Vorname Nachname" -> Booru-Tags: vorname_nachname und nachname_vorname
+    function booruNameVariants(name) {
+      const parts = (name || "").toLowerCase().replace(/['’]/g, "").replace(/[^\p{L}\p{N}\s-]/gu, " ").split(/\s+/).filter(Boolean);
+      if (!parts.length) return [];
+      const v = [parts.join("_")];
+      if (parts.length > 1) {
+        v.push([...parts.slice(1), parts[0]].join("_"));
+        v.push([parts[parts.length - 1], ...parts.slice(0, -1)].join("_"));
       }
-      
-      const searchQuery = `${characterName} ${animeTitle}`;
-      const encodedQuery = encodeURIComponent(searchQuery);
-      
-      const apiEndpoint = currentSource === 'danbooru' 
-        ? `https://danbooru.donmai.us/posts.json?search=${encodedQuery}&limit=1`
-        : `https://safebooru.org/api/v1/posts.json?search=${encodedQuery}&limit=1`;
-      
-      // CORS proxies to try
-      const corsProxies = [
-        'https://corsproxy.io/?url=',
-        'https://api.codetabs.com/v1/?url=',
-        'https://api.allorigins.win/raw?url=',
-        'https://cors-anywhere.herokuapp.com/'
-      ];
-      
-      for (const proxy of corsProxies) {
-        try {
-          const proxyUrl = proxy + encodeURIComponent(apiEndpoint);
-          
-          const headers = {
-            'Accept': 'application/json'
-          };
-          
-          // Add API key (required for danbooru/safebooru)
-          headers['Api-Key'] = encodeURIComponent(API_KEYS[currentSource]);
-          
-          const response = await fetch(proxyUrl, { headers });
-          
-          if (!response.ok) {
-            console.warn(`${currentSource} API via proxy returned status ${response.status}`);
-            if (response.status === 401) {
-              setStatus(`Ungültiger ${currentSource} API-Schlüssel.`);
-              playSound("error");
-              return null;
-            }
-            continue;
-          }
-          
-          const data = await response.json();
-          
-          if (data && data.length > 0 && data[0].file_url) {
-            // danbooru/safebooru image URL
-            const imageUrl = data[0].file_url;
-            
-            // Check if it's a valid image URL
-            if (imageUrl && (imageUrl.startsWith('http') || imageUrl.startsWith('//'))) {
-              return imageUrl.startsWith('//') ? 'https:' + imageUrl : imageUrl;
-            }
-          }
-          
-          return null;
-        } catch (error) {
-          console.warn(`Error fetching image from ${currentSource} via proxy:`, error);
-          continue;
+      return [...new Set(v)];
+    }
+
+    // Mehrdeutige Namen (rem_(re:zero) vs. rem_(fate)): Überlappung der Klammer mit dem Anime-Titel, dann Post-Anzahl
+    function pickBestTag(cands, variants, animeText) {
+      const toks = (animeText.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []);
+      const better = (a, b) => { for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
+      let best = null;
+      for (const c of cands) {
+        if (!c.name) continue;
+        const vi = variants.findIndex(v => c.name === v || c.name.startsWith(v + "_("));
+        if (vi === -1) continue;
+        const paren = c.name.includes("_(") ? c.name.slice(c.name.indexOf("_(")) : "";
+        const key = [toks.filter(t => paren.includes(t)).length, -vi, c.count || 0];
+        if (!best || better(key, best.key)) best = { name: c.name, key };
+      }
+      return best ? best.name : null;
+    }
+
+    async function danbooruImage(variants, animeText) {
+      const auth = (API_KEYS.username && API_KEYS.danbooru) ? { login: API_KEYS.username, api_key: API_KEYS.danbooru } : {};
+      let tag = null;
+      for (const v of variants) {
+        for (const pattern of [v + "_(*", v]) {
+          const qs = new URLSearchParams({ "search[name_matches]": pattern, "search[category]": "4", "search[order]": "count", limit: "20", ...auth });
+          const tags = await booruJson("https://danbooru.donmai.us/tags.json?" + qs);
+          tag = pickBestTag((Array.isArray(tags) ? tags : []).map(t => ({ name: t.name, count: t.post_count })), variants, animeText);
+          if (tag) break;
         }
+        if (tag) break;
       }
-      
-      console.warn(`All CORS proxies failed for ${currentSource}`);
-      return null;
+      if (!tag) return null;
+      const qs = new URLSearchParams({ tags: [tag, DANBOORU_RATING].filter(Boolean).join(" "), limit: "10", random: "true", ...auth });
+      const posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
+      const urls = (Array.isArray(posts) ? posts : []).map(p => absUrl(p.large_file_url || p.file_url)).filter(u => u && IMAGE_EXT.test(u));
+      return urls[0] || null;
+    }
+
+    async function safebooruImage(variants, animeText) {
+      let tag = null;
+      for (const v of variants) {
+        for (const pattern of [v + "_(", v]) {
+          const list = await booruJson("https://safebooru.org/autocomplete.php?q=" + encodeURIComponent(pattern), { proxy: true });
+          const cands = (Array.isArray(list) ? list : []).map(i => ({
+            name: i.value,
+            count: parseInt((String(i.label || "").match(/\((\d+)\)\s*$/) || [])[1] || "0", 10),
+          }));
+          tag = pickBestTag(cands, variants, animeText);
+          if (tag) break;
+        }
+        if (tag) break;
+      }
+      if (!tag) return null;
+      const qs = new URLSearchParams({ page: "dapi", s: "post", q: "index", json: "1", limit: "50", tags: tag });
+      const data = await booruJson("https://safebooru.org/index.php?" + qs, { proxy: true });
+      const posts = Array.isArray(data) ? data : (data && data.post) || [];
+      const urls = posts
+        .map(p => absUrl(p.file_url) || (p.directory && p.image ? `https://safebooru.org/images/${p.directory}/${p.image}` : null))
+        .filter(u => u && IMAGE_EXT.test(u));
+      return urls.length ? urls[Math.floor(Math.random() * urls.length)] : null;
+    }
+
+    async function fetchBooruImage(source, char) {
+      const variants = booruNameVariants(char.name);
+      if (!variants.length) return null;
+      const animeText = char.animeAll || char.anime || "";
+      return source === "danbooru" ? danbooruImage(variants, animeText) : safebooruImage(variants, animeText);
+    }
+
+    // Ersetzt char.image direkt im Objekt; bei Fehlern bleibt das AniList-Bild
+    async function applyBooruImages(chars, quiet = false) {
+      if (currentSource !== "danbooru" && currentSource !== "safebooru") return;
+      const source = currentSource;
+      const todo = chars.slice();
+      let done = 0, found = 0;
+      const worker = async () => {
+        while (todo.length) {
+          const c = todo.shift();
+          const key = `${source}|${c.id}`;
+          if (!booruCache.has(key)) {
+            let url = null;
+            try { url = await fetchBooruImage(source, c); }
+            catch (e) { console.warn(`[${source}] Bildsuche für "${c.name}" fehlgeschlagen:`, e); }
+            booruCache.set(key, url);
+          }
+          const url = booruCache.get(key);
+          if (url) { c.image = url; found++; } else console.info(`[${source}] kein Bild für "${c.name}" (${c.anime}) – AniList-Bild bleibt`);
+          done++;
+          if (!quiet) setStatus(`Lade Bilder von ${source} … ${done}/${chars.length}`);
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+      if (!quiet) console.info(`[${source}] ${found}/${chars.length} Bilder gefunden`);
     }
 
     function extractCharacters(lists, lang = "de", role = "MAIN") {
@@ -1359,18 +1412,19 @@
           const title = lang === "en"
             ? (media.title.english || media.title.romaji)
             : media.title.romaji;
-          for (const character of media.characters.nodes) {
-            if (character.gender !== "Female") continue;
-            // role="MAIN" filtert Hauptcharaktere (nur solche mit role=MAIN)
-            // Da die API keine Rollen-Filterung über Variablen unterstützt,
-            // filtern wir clientseitig nach dem characters.sort=ROLE-Attribut
-            if (role === "MAIN" && character.role !== "MAIN") continue;
+          const allTitles = [media.title.romaji, media.title.english].filter(Boolean).join(" ");
+          for (const edge of (media.characters?.edges || [])) {
+            const character = edge.node;
+            if (!character || character.gender !== "Female") continue;
+            // Die Rolle (MAIN/SUPPORTING/BACKGROUND) steckt an der Edge, nicht am Character
+            if (role === "MAIN" && edge.role !== "MAIN") continue;
             if (!seen.has(character.id) && character.image?.large) {
               seen.set(character.id, {
                 id: character.id,
                 name: character.name.full || character.name.native,
                 image: character.image.large,
                 anime: title,
+                animeAll: allTitles,
               });
             }
           }
@@ -1551,6 +1605,7 @@
           }
           const charMap = new Map(characters.map(c => [c.id, c]));
           currentCharacters = data.ids.map(id => charMap.get(id)).filter(Boolean);
+          await applyBooruImages(currentCharacters);
           currentPool = [...currentCharacters];
           
           tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
@@ -1936,6 +1991,7 @@ container.appendChild(tierListClone);
           }
           const charMap = new Map(characters.map(c => [c.id, c]));
           currentCharacters = data.ids.map(id => charMap.get(id)).filter(Boolean);
+          await applyBooruImages(currentCharacters);
           currentPool = [...currentCharacters];
           
           tierState = { S: [], A: [], B: [], C: [], D: [], Unranked: [] };
@@ -2120,6 +2176,8 @@ container.appendChild(tierListClone);
         }
         const shuffled = characters.slice().sort(() => 0.5 - Math.random());
         smashPool = desiredCount > 0 ? shuffled.slice(0, desiredCount) : shuffled; // 0 = alle
+        await applyBooruImages(smashPool.slice(0, 5));
+        applyBooruImages(smashPool.slice(5), true); // Rest im Hintergrund
         smashIndex = 0;
         smashResults = { smash: [], pass: [] };
         smashCard.style.display = "block";
