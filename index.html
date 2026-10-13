@@ -668,20 +668,6 @@
       <input type="text" id="username" placeholder="e.g. your_anilist_name" autocomplete="off" spellcheck="false">
     </div>
 
-    <div class="field" id="apiKeyField" style="display:none;">
-      <label for="apiUsername">Username</label>
-      <input type="text" id="apiUsername" placeholder="your_danbooru_username" autocomplete="off" spellcheck="false">
-      
-      <label for="apiKey" style="margin-top: 10px;">API Key</label>
-      <input type="password" id="apiKey" placeholder="API Key" autocomplete="off" spellcheck="false">
-      
-      <small style="color:var(--muted);font-size:11px; margin-top: 5px; display: block;">
-        Get your API key from <a href="https://donmai.us/users" target="_blank" rel="noopener">donmai.us/users</a>
-      </small>
-      <div style="margin-top: 10px; font-size: 11px; color: var(--pink); display: none;" id="apiKeyWarning">
-        Optional: credentials are saved locally in this browser.
-      </div>
-    </div>
 
     <div class="field">
       <label for="statusFilter">Anime Status</label>
@@ -822,23 +808,18 @@
       });
       
       const sourceInfo = document.getElementById('sourceInfo');
-      const apiKeyField = document.getElementById('apiKeyField');
       
       switch(source) {
         case 'anilist':
           sourceInfo.textContent = 'Loads character data from the AniList API';
-          apiKeyField.style.display = 'none';
           break;
         case 'danbooru':
           sourceInfo.textContent = 'Loads safe-rated character images using Danbooru preset 1';
-          apiKeyField.style.display = 'block';
           break;
         case 'danbooru2':
           sourceInfo.textContent = 'Loads safe-rated character images using Danbooru preset 2';
-          apiKeyField.style.display = 'block';
           break;
       }
-      loadApiKeys();
       
       localStorage.removeItem(`${CACHE_KEY_PREFIX}${usernameInput.value}_${statusFilter.value}_${languageSelect.value}_${roleFilter.value}`);
       
@@ -847,40 +828,9 @@
       }
     }
 
-    function saveApiKeys() {
-      const apiKey = document.getElementById('apiKey').value;
-      const apiUsername = document.getElementById('apiUsername').value;
-      API_KEYS[currentSource] = apiKey;
-      API_KEYS.username = apiUsername;
-      localStorage.setItem(`${currentSource}ApiKey`, apiKey);
-      localStorage.setItem('danbooruUsername', apiUsername);
-      
-      setStatus('API key saved');
-      playSound('success');
-    }
-
-    function loadApiKeys() {
-      const savedDanbooruKey = localStorage.getItem('danbooruApiKey') || '';
-      const savedDanbooru2Key = localStorage.getItem('danbooru2ApiKey') || '';
-      const savedDanbooruUsername = localStorage.getItem('danbooruUsername') || '';
-
-      API_KEYS.danbooru = savedDanbooruKey;
-      API_KEYS.danbooru2 = savedDanbooru2Key || savedDanbooruKey;
-      API_KEYS.username = savedDanbooruUsername;
-
-      const apiKeyInput = document.getElementById('apiKey');
-      const apiUsernameInput = document.getElementById('apiUsername');
-      if (savedDanbooruUsername) apiUsernameInput.value = savedDanbooruUsername;
-      if (currentSource === 'danbooru') {
-        apiKeyInput.value = savedDanbooruKey;
-      } else if (currentSource === 'danbooru2') {
-        apiKeyInput.value = savedDanbooru2Key || savedDanbooruKey;
-      }
-    }
-
-    // API credentials are optional and are never embedded in this HTML file.
+    // Optional Danbooru credentials belong here in the source code (not in the UI).
+    // Public image/tag searches can often run without credentials. If needed, use a newly rotated key.
     const API_KEYS = {
-      // Keep credentials out of the HTML source. Enter them in the settings UI.
       danbooru: "",
       danbooru2: "",
       username: ""
@@ -1002,8 +952,6 @@
       languageSelect.value = "en";
     } catch (error) {}
 
-    // Load saved API keys
-    try { loadApiKeys(); } catch (error) {}
 
     // Load saved role filter
     try {
@@ -1063,16 +1011,6 @@
     }
     updateVolumeIcon();
 
-    // API key input: Enter saves
-    const apiKeyInput = document.getElementById("apiKey");
-    apiKeyInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") saveApiKeys();
-    });
-    apiKeyInput.addEventListener("change", saveApiKeys);
-    document.getElementById("apiUsername").addEventListener("change", saveApiKeys);
-
-    // Load saved API keys
-    try { loadApiKeys(); } catch (error) {}
 
     // Middle-click a single card to open the character on AniList
     let currentPickId = null;
