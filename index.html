@@ -636,14 +636,23 @@
 <body>
     <main class="app">
     <h1>🎲 AniList Waifu Roulette</h1>
-    <p class="subtitle">Gib deinen AniList-Nutzernamen ein und würfle zufällige weibliche Charaktere aus deiner Anime- Liste.</p>
+    <p class="subtitle">Enter your AniList username and roll for random female characters from your anime list.</p>
 
     <div class="source-selector">
-      <button class="source-option active" onclick="setSource('anilist')" data-source="anilist">AniList (offiziell)</button>
-      <button class="source-option" onclick="setSource('danbooru')" data-source="danbooru">danbooru</button>
-      <button class="source-option" onclick="setSource('safebooru')" data-source="safebooru">safebooru</button>
+      <button class="source-option active" onclick="setSource('anilist')" data-source="anilist">AniList (Official)</button>
+      <button class="source-option" onclick="setSource('danbooru1')" data-source="danbooru1">Danbooru 1</button>
+      <button class="source-option" onclick="setSource('danbooru2')" data-source="danbooru2">Danbooru 2</button>
     </div>
-    <div class="source-info" id="sourceInfo">Lädt Daten von AniList API</div>
+    <div class="source-info" id="sourceInfo">Loading data from AniList API</div>
+
+    <div class="field" id="danbooru1Field" style="display:none;">
+      <label for="danbooru1SearchTerms">Danbooru 1 Search Terms</label>
+      <input type="text" id="danbooru1SearchTerms" placeholder="e.g. 1girl, solo, highres" autocomplete="off">
+    </div>
+    <div class="field" id="danbooru2Field" style="display:none;">
+      <label for="danbooru2SearchTerms">Danbooru 2 Search Terms</label>
+      <input type="text" id="danbooru2SearchTerms" placeholder="e.g. 1girl, solo, highres" autocomplete="off">
+    </div>
 
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="roll" id="tabRoll">Roll-Modus</button>
@@ -653,8 +662,8 @@
     <div class="top-controls">
       <div class="language-control">
         <select id="language">
-          <option value="de" selected>Deutsch</option>
-          <option value="en">Englisch</option>
+          <option value="en" selected>English</option>
+          <option value="de">Deutsch</option>
         </select>
       </div>
       <div class="volume-control" id="volumeControl">
@@ -664,91 +673,91 @@
     </div>
 
     <div class="field">
-      <label for="username">AniList-Username</label>
-      <input type="text" id="username" placeholder="z. B. dein_anilist_name" autocomplete="off" spellcheck="false">
+      <label for="username">AniList Username</label>
+      <input type="text" id="username" placeholder="e.g. your_anilist_name" autocomplete="off" spellcheck="false">
     </div>
 
     <div class="field" id="apiKeyField" style="display:none;">
-      <label for="apiUsername">Benutzername</label>
-      <input type="text" id="apiUsername" placeholder="dein_danbooru_username" autocomplete="off" spellcheck="false">
-      
-      <label for="apiKey" style="margin-top: 10px;">API Schlüssel</label>
-      <input type="password" id="apiKey" placeholder="API Schlüssel" autocomplete="off" spellcheck="false">
-      
+      <label for="apiUsername">Username</label>
+      <input type="text" id="apiUsername" placeholder="your_danbooru_username" autocomplete="off" spellcheck="false">
+
+      <label for="apiKey" style="margin-top: 10px;">API Key</label>
+      <input type="password" id="apiKey" placeholder="API Key" autocomplete="off" spellcheck="false">
+
       <small style="color:var(--muted);font-size:11px; margin-top: 5px; display: block;">
-        Hol dir deinen API-Schlüssel von <a href="https://donmai.us/users" target="_blank" rel="noopener">donmai.us/users</a>
+        Get your API key from <a href="https://donmai.us/users" target="_blank" rel="noopener">donmai.us/users</a>
       </small>
       <div style="margin-top: 10px; font-size: 11px; color: var(--pink); display: none;" id="apiKeyWarning">
-        ⚠️ API Schlüssel und Benutzername sind erforderlich für danbooru
+        ⚠️ API Key and Username are required for danbooru
       </div>
     </div>
 
     <div class="field">
-      <label for="statusFilter">Anime-Status</label>
+      <label for="statusFilter">Anime Status</label>
       <select id="statusFilter">
-        <option value="COMPLETED,CURRENT" selected>Abgeschlossen + Laufend</option>
-        <option value="COMPLETED">Nur abgeschlossen</option>
-        <option value="COMPLETED,CURRENT,PAUSED,REPEATING">Alles außer abgebrochen/geplant</option>
+        <option value="COMPLETED,CURRENT" selected>Completed + Currently Watching</option>
+        <option value="COMPLETED">Only Completed</option>
+        <option value="COMPLETED,CURRENT,PAUSED,REPEATING">All except dropped/planned</option>
       </select>
     </div>
     <div class="field">
-      <label for="roleFilter">Charakter-Typ</label>
+      <label for="roleFilter">Character Type</label>
       <select id="roleFilter">
-        <option value="MAIN" selected>Nur Hauptcharaktere</option>
-        <option value="ALL">Alle Charaktere</option>
+        <option value="MAIN" selected>Main Characters Only</option>
+        <option value="ALL">All Characters</option>
       </select>
     </div>
 
     <div class="field" id="countField" style="display:none;">
-      <label for="count">Anzahl der Waifus</label>
+      <label for="count">Number of Waifus</label>
       <input type="number" id="count" min="0" max="1000" value="0">
-      <small style="color:var(--muted);font-size:11px;">0 = alle verfügbaren Waifus (kein Limit)</small>
+      <small style="color:var(--muted);font-size:11px;">0 = all available waifus (no limit)</small>
     </div>
 
     <div class="field" id="animeField">
-      <label for="animeFilter">Anime-Filter (optional)</label>
-      <input type="text" id="animeFilter" placeholder="z. B. Attack on Titan" autocomplete="off">
+      <label for="animeFilter">Anime Filter (optional)</label>
+      <input type="text" id="animeFilter" placeholder="e.g. Attack on Titan" autocomplete="off">
     </div>
 
-    <button id="rollBtn">Waifu würfeln</button>
+<button id="rollBtn">Roll Waifu</button>
     <div id="status" aria-live="polite"></div>
-    
-<!-- Single Roll Result -->
+
+    <!-- Single Roll Result -->
     <section id="rollResult" aria-live="polite">
       <div class="single-card">
         <img id="charImg" src="" alt="">
         <div class="single-info">
           <h2 id="charName"></h2>
           <p id="fromAnime"></p>
-          <p class="open-hint">🔍 Mittelklick zum Öffnen auf AniList</p>
+          <p class="open-hint">🔍 Middle-click to open on AniList</p>
         </div>
       </div>
       <div class="meta">
         <span id="poolSize"></span>
-        <span>Cache: 1 Stunde</span>
+        <span>Cache: 1 hour</span>
       </div>
     </section>
 
     <!-- Tier List Result -->
     <section id="tierMode" aria-live="polite">
       <div class="tier-toolbar">
-        <button id="clearTierBtn" type="button">Tier-List leeren</button>
-        <button id="rerollTierBtn" type="button">Neu würfeln</button>
-        <button id="addMoreBtn" type="button">+ Mehr Waifus</button>
+        <button id="clearTierBtn" type="button">Clear Tier List</button>
+        <button id="rerollTierBtn" type="button">Re-roll</button>
+        <button id="addMoreBtn" type="button">+ Add More Waifus</button>
         <button id="shareTierBtn" type="button" style="display:none;">Share Tier List</button>
-        <button id="exportTierBtn" type="button">Als Bild exportieren</button>
+        <button id="exportTierBtn" type="button">Export as Image</button>
       </div>
       <div class="field" id="shareInputField" style="display:none;">
         <label for="shareLink">Share Link</label>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="shareLink" placeholder="Link zum Teilen" readonly style="flex:1;">
-          <button id="copyLinkBtn">Kopieren</button>
+          <input type="text" id="shareLink" placeholder="Link to share" readonly style="flex:1;">
+          <button id="copyLinkBtn">Copy</button>
         </div>
       </div>
       <div class="field" id="importField" style="display:none;">
         <label for="importLink">Import Tier List</label>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="importLink" placeholder="Füge hier einen Share-Link ein">
+          <input type="text" id="importLink" placeholder="Paste a share link here">
           <button id="importBtn">Import</button>
         </div>
       </div>
@@ -759,8 +768,8 @@
     <!-- Smash or Pass Result -->
     <section id="smashMode" aria-live="polite">
       <div class="smash-toolbar">
-        <button id="newSmashGameBtn" type="button">Neues Spiel starten</button>
-        <button id="revealSummaryBtn" type="button" style="display:none;">Summary anzeigen</button>
+        <button id="newSmashGameBtn" type="button">Start New Game</button>
+        <button id="revealSummaryBtn" type="button" style="display:none;">Show Summary</button>
       </div>
       <div class="smash-card" id="smashCard" style="display:none;">
         <img id="smashCharImg" src="" alt="">
@@ -768,7 +777,7 @@
         <div class="smash-info">
           <h2 id="smashCharName"></h2>
           <p id="smashFromAnime"></p>
-          <p class="open-hint">🔍 Mittelklick zum Öffnen auf AniList</p>
+          <p class="open-hint">🔍 Middle-click to open on AniList</p>
         </div>
         <div class="smash-actions">
           <button class="smash-btn pass" id="passBtn" type="button" aria-label="Pass">✕</button>
@@ -778,8 +787,8 @@
       <div class="smash-progress" id="smashProgress"></div>
       <div class="smash-summary" id="smashSummary">
         <div class="summary-header">
-          <h3>🎯 Smash or Pass — Zusammenfassung</h3>
-          <button class="summary-toggle" id="closeSummaryBtn" type="button">Schließen</button>
+          <h3>🎯 Smash or Pass — Summary</h3>
+          <button class="summary-toggle" id="closeSummaryBtn" type="button">Close</button>
         </div>
         <div class="summary-grid">
           <div class="summary-col smash">
@@ -792,14 +801,14 @@
           </div>
         </div>
         <div class="summary-stats">
-          <span>Gesamt: <span id="totalSmashCount">0</span> Smash / <span id="totalPassCount">0</span> Pass</span>
+          <span>Total: <span id="totalSmashCount">0</span> Smash / <span id="totalPassCount">0</span> Pass</span>
         </div>
       </div>
     </section>
 
     <p class="hint">
-      Die Website nutzt die öffentliche <a href="https://anilist.co/api/v2/doc/" target="_blank" rel="noopener noreferrer">AniList API</a>.
-      Deine Liste muss öffentlich sichtbar sein.
+      This website uses the public <a href="https://anilist.co/api/v2/doc/" target="_blank" rel="noopener noreferrer">AniList API</a>.
+      Your list must be public.
     </p>
   </main>
 
@@ -823,19 +832,26 @@
       
       const sourceInfo = document.getElementById('sourceInfo');
       const apiKeyField = document.getElementById('apiKeyField');
+      const danbooru1Field = document.getElementById('danbooru1Field');
+      const danbooru2Field = document.getElementById('danbooru2Field');
+      
+      danbooru1Field.style.display = 'none';
+      danbooru2Field.style.display = 'none';
       
       switch(source) {
         case 'anilist':
-          sourceInfo.textContent = 'Lädt Daten von AniList API';
+          sourceInfo.textContent = 'Loading data from AniList API';
           apiKeyField.style.display = 'none';
           break;
-        case 'danbooru':
-          sourceInfo.textContent = 'Lädt Charakterbilder von danbooru';
-          apiKeyField.style.display = 'none'; // Zugangsdaten sind fest im Code hinterlegt
-          break;
-        case 'safebooru':
-          sourceInfo.textContent = 'Lädt Charakterbilder von safebooru (kein Schlüssel nötig)';
+        case 'danbooru1':
+          sourceInfo.textContent = 'Loading character images from Danbooru 1';
           apiKeyField.style.display = 'none';
+          danbooru1Field.style.display = 'block';
+          break;
+        case 'danbooru2':
+          sourceInfo.textContent = 'Loading character images from Danbooru 2';
+          apiKeyField.style.display = 'none';
+          danbooru2Field.style.display = 'block';
           break;
       }
       
@@ -854,7 +870,7 @@
       localStorage.setItem(`${currentSource}ApiKey`, apiKey);
       localStorage.setItem('danbooruUsername', apiUsername);
       
-      setStatus('API Schlüssel gespeichert');
+      setStatus('API Key saved');
       playSound('success');
     }
 
@@ -1328,8 +1344,9 @@
       return best ? best.name : null;
     }
 
-    async function danbooruImage(variants, animeText) {
+    async function danbooruImage(variants, animeText, searchTerms = "") {
       const auth = (API_KEYS.username && API_KEYS.danbooru) ? { login: API_KEYS.username, api_key: API_KEYS.danbooru } : {};
+      const customTerms = searchTerms.split(",").map(t => t.trim()).filter(Boolean);
       let tag = null;
       for (const v of variants) {
         for (const pattern of [v + "_(*", v]) {
@@ -1341,7 +1358,8 @@
         if (tag) break;
       }
       if (!tag) return null;
-      const qs = new URLSearchParams({ tags: [tag, DANBOORU_RATING].filter(Boolean).join(" "), limit: "10", random: "true", ...auth });
+      const allTags = [tag, DANBOORU_RATING, ...customTerms].filter(Boolean).join(" ");
+      const qs = new URLSearchParams({ tags: allTags, limit: "10", random: "true", ...auth });
       const posts = await booruJson("https://danbooru.donmai.us/posts.json?" + qs);
       const urls = (Array.isArray(posts) ? posts : []).map(p => absUrl(p.large_file_url || p.file_url)).filter(u => u && IMAGE_EXT.test(u));
       return urls[0] || null;
@@ -1371,17 +1389,21 @@
       return urls.length ? urls[Math.floor(Math.random() * urls.length)] : null;
     }
 
-    async function fetchBooruImage(source, char) {
+    async function fetchBooruImage(source, char, searchTerms = "") {
       const variants = booruNameVariants(char.name);
       if (!variants.length) return null;
       const animeText = char.animeAll || char.anime || "";
-      return source === "danbooru" ? danbooruImage(variants, animeText) : safebooruImage(variants, animeText);
+      return source === "danbooru1" ? danbooruImage(variants, animeText, searchTerms) : 
+             source === "danbooru2" ? danbooruImage(variants, animeText, searchTerms) : null;
     }
 
     // Ersetzt char.image direkt im Objekt; bei Fehlern bleibt das AniList-Bild
     async function applyBooruImages(chars, quiet = false) {
-      if (currentSource !== "danbooru" && currentSource !== "safebooru") return;
+      if (currentSource !== "danbooru1" && currentSource !== "danbooru2") return;
       const source = currentSource;
+      const searchTerms = source === "danbooru1" 
+        ? document.getElementById('danbooru1SearchTerms').value 
+        : document.getElementById('danbooru2SearchTerms').value;
       const todo = chars.slice();
       let done = 0, found = 0;
       const worker = async () => {
@@ -1390,14 +1412,14 @@
           const key = `${source}|${c.id}`;
           if (!booruCache.has(key)) {
             let url = null;
-            try { url = await fetchBooruImage(source, c); }
+            try { url = await fetchBooruImage(source, c, searchTerms); }
             catch (e) { console.warn(`[${source}] Bildsuche für "${c.name}" fehlgeschlagen:`, e); }
             booruCache.set(key, url);
           }
           const url = booruCache.get(key);
           if (url) { c.image = url; found++; } else console.info(`[${source}] kein Bild für "${c.name}" (${c.anime}) – AniList-Bild bleibt`);
           done++;
-          if (!quiet) setStatus(`Lade Bilder von ${source} … ${done}/${chars.length}`);
+          if (!quiet) setStatus(`Loading images from ${source} … ${done}/${chars.length}`);
         }
       };
       await Promise.all([worker(), worker(), worker()]);
