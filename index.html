@@ -1922,24 +1922,26 @@ container.appendChild(tierListClone);
     }
 
     async function drawImageWithCORS(ctx, url, x, y, width, height) {
-      // AniList CDN doesn't support CORS, use a proxy
+      // Erst direkt versuchen (Danbooru/Safebooru-CDNs senden CORS-Header),
+      // danach über Proxys (z. B. für das AniList-CDN).
       const proxies = [
         "https://corsproxy.io/?url=",
         "https://api.codetabs.com/v1/?url=",
         "https://api.allorigins.win/raw?url="
       ];
-      
-      for (const proxy of proxies) {
+      const candidates = [url, ...proxies.map(p => p + encodeURIComponent(url))];
+
+      for (const src of candidates) {
         try {
           const img = new Image();
           img.crossOrigin = "anonymous";
-          
+
           await new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
               img.onerror = null;
               reject(new Error('Timeout'));
             }, 5000);
-            
+
             img.onload = () => {
               clearTimeout(timeoutId);
               ctx.drawImage(img, x, y, width, height);
@@ -1947,17 +1949,17 @@ container.appendChild(tierListClone);
             };
             img.onerror = () => {
               clearTimeout(timeoutId);
-              reject(new Error('Proxy failed'));
+              reject(new Error('Load failed'));
             };
-            img.src = proxy + encodeURIComponent(url);
+            img.src = src;
           });
           return;
         } catch (e) {
-          // Try next proxy
+          // Nächsten Versuch probieren
           continue;
         }
       }
-      
+
       // All proxies failed, draw placeholder
       ctx.fillStyle = "#333";
       ctx.fillRect(x, y, width, height);
